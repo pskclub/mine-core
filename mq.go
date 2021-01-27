@@ -2,9 +2,9 @@ package core
 
 import (
 	"fmt"
+	"github.com/pskclub/mine-core/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
-	"github.com/pskclub/mine-core/utils"
 )
 
 type MQ struct {
@@ -31,13 +31,22 @@ type IMQ interface {
 	PublishJSON(name string, data interface{}, options *MQPublishOptions) error
 	Consume(name string, onConsume func(message amqp.Delivery), options *MQConsumeOptions) error
 	Conn() *amqp.Connection
+	ReConnect()
 }
 
 type mq struct {
 	connection *amqp.Connection
+	mq         *MQ
+}
+
+func (m mq) ReConnect() {
+	if m.connection.IsClosed() {
+		m.connection, _ = m.mq.ReConnect()
+	}
 }
 
 func (m mq) PublishJSON(name string, data interface{}, options *MQPublishOptions) error {
+	m.ReConnect()
 	ch, err := m.Conn().Channel()
 	if err != nil {
 		return err
@@ -70,6 +79,10 @@ func (m mq) PublishJSON(name string, data interface{}, options *MQPublishOptions
 		return err
 	}
 
+	if NewEnv().Config().LogLevel == logrus.DebugLevel {
+		fmt.Printf("Publish a message at '%s' channel", name)
+	}
+
 	return nil
 }
 
@@ -85,6 +98,7 @@ type MQConsumeOptions struct {
 }
 
 func (m mq) Consume(name string, onConsume func(message amqp.Delivery), options *MQConsumeOptions) error {
+	m.ReConnect()
 	ch, err := m.Conn().Channel()
 	if err != nil {
 		return err
@@ -150,7 +164,21 @@ func (m *MQ) Connect() (IMQ, error) {
 		return nil, err
 	}
 
-	return &mq{connection: conn}, nil
+	return &mq{connection: conn, mq: m}, nil
+}
+
+// ConnectDB to connect Database
+func (m *MQ) ReConnect() (*amqp.Connection, error) {
+	dsn := fmt.Sprintf("amqp://%s:%s@%s:%s/",
+		m.User, m.Password, m.Host, m.Port,
+	)
+
+	conn, err := amqp.Dial(dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
 }
 
 func (m mq) Close() {

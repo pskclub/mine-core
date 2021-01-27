@@ -2,8 +2,8 @@ package core
 
 import (
 	"encoding/json"
-	"github.com/thedevsaddam/gojsonq/v2"
 	"github.com/pskclub/mine-core/utils"
+	"github.com/thedevsaddam/gojsonq/v2"
 	"gopkg.in/asaskevich/govalidator.v9"
 	"net/url"
 	"reflect"
@@ -72,6 +72,23 @@ func (b *BaseValidator) Merge(errs ...*Valid) IError {
 	}
 
 	return err
+}
+
+func (b *BaseValidator) AddValidator(errs ...*Valid) {
+	if b.validator == nil {
+		b.validator = NewValid()
+	}
+
+	for _, value := range errs {
+		if value == nil {
+			continue
+		}
+
+		for _, value := range value.err.errors {
+			b.validator.Add(value)
+		}
+
+	}
 }
 
 func (b *BaseValidator) LoopJSONArray(j *json.RawMessage) []interface{} {
