@@ -19,6 +19,7 @@ type IHTTPContext interface {
 	BindWithValidate(ctx IValidateContext) IError
 	BindOnly(i interface{}) IError
 	GetPageOptions() *PageOptions
+	GetUserAgent() *uasurfer.UserAgent
 }
 
 type HTTPContext struct {
