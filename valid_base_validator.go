@@ -644,6 +644,18 @@ func (b *BaseValidator) IsStrMax(input *string, size int, fieldPath string) (boo
 	return true, nil
 }
 
+func (b *BaseValidator) IsStrMin(input *string, size int, fieldPath string) (bool, *IValidMessage) {
+	if input == nil {
+		return true, nil
+	}
+
+	if len(*input) < size {
+		return false, StrMinM(fieldPath, size)
+	}
+
+	return true, nil
+}
+
 func (b *BaseValidator) IsArraySize(array interface{}, size int, fieldPath string) (bool, *IValidMessage) {
 	if array == nil {
 		return true, nil

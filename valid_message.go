@@ -252,6 +252,15 @@ var StrMaxM = func(field string, max int) *IValidMessage {
 	}
 }
 
+var StrMinM = func(field string, min int) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_STRING_SIZE_MIN",
+		Message: fmt.Sprintf("The %v field must not be least than %v character(s)", field, min),
+		Data:    min,
+	}
+}
+
 var IPM = func(field string) *IValidMessage {
 	return &IValidMessage{
 		Name:    field,
@@ -264,6 +273,6 @@ var EmailM = func(field string) *IValidMessage {
 	return &IValidMessage{
 		Name:    field,
 		Code:    "INVALID_EMAIL",
-		Message: fmt.Sprintf("The %v field must be Email", field),
+		Message: fmt.Sprintf("The %v field must be email", field),
 	}
 }
