@@ -743,3 +743,19 @@ func (b *BaseValidator) IsIP(field *string, fieldPath string) (bool, *IValidMess
 
 	return true, nil
 }
+
+func (b *BaseValidator) IsEmail(field *string, fieldPath string) (bool, *IValidMessage) {
+	if field == nil {
+		return true, nil
+	}
+
+	if *field == "" {
+		return true, nil
+	}
+
+	if !govalidator.IsEmail(*field) {
+		return false, EmailM(fieldPath)
+	}
+
+	return true, nil
+}

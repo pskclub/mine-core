@@ -259,3 +259,11 @@ var IPM = func(field string) *IValidMessage {
 		Message: fmt.Sprintf("The %v field must be IP Address", field),
 	}
 }
+
+var EmailM = func(field string) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_EMAIL",
+		Message: fmt.Sprintf("The %v field must be Email", field),
+	}
+}
