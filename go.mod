@@ -12,6 +12,7 @@ require (
 	github.com/gojektech/heimdall/v6 v6.1.0
 	github.com/jinzhu/copier v0.1.0
 	github.com/labstack/echo/v4 v4.1.17
+	github.com/mssola/user_agent v0.5.2 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/viper v1.7.1

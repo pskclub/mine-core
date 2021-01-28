@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/avct/uasurfer"
 	"github.com/go-errors/errors"
 	"github.com/labstack/echo/v4"
+	"github.com/mssola/user_agent"
 	"github.com/pskclub/mine-core/consts"
 	"io/ioutil"
 	"net/http"
@@ -19,7 +19,7 @@ type IHTTPContext interface {
 	BindWithValidate(ctx IValidateContext) IError
 	BindOnly(i interface{}) IError
 	GetPageOptions() *PageOptions
-	GetUserAgent() *uasurfer.UserAgent
+	GetUserAgent() *user_agent.UserAgent
 }
 
 type HTTPContext struct {
@@ -136,6 +136,6 @@ func (c *HTTPContext) Log() ILogger {
 	return c.logger.(ILogger)
 }
 
-func (c HTTPContext) GetUserAgent() *uasurfer.UserAgent {
-	return uasurfer.Parse(c.Request().UserAgent())
+func (c HTTPContext) GetUserAgent() *user_agent.UserAgent {
+	return user_agent.New(c.Request().UserAgent())
 }
