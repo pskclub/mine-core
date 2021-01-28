@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/avct/uasurfer v0.0.0-20191028135549-26b5daa857f1 // indirect
 	github.com/bxcodec/faker/v3 v3.5.0
 	github.com/getsentry/sentry-go v0.8.0
 	github.com/go-errors/errors v1.1.1

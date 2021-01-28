@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/avct/uasurfer"
 	"github.com/go-errors/errors"
 	"github.com/labstack/echo/v4"
 	"github.com/pskclub/mine-core/consts"
@@ -132,4 +133,8 @@ func (c *HTTPContext) Log() ILogger {
 		c.logger = NewHTTPLogger(c)
 	}
 	return c.logger.(ILogger)
+}
+
+func (c HTTPContext) GetUserAgent() *uasurfer.UserAgent {
+	return uasurfer.Parse(c.Request().UserAgent())
 }
