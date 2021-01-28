@@ -19,6 +19,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/thedevsaddam/gojsonq/v2 v2.5.2
 	go.mongodb.org/mongo-driver v1.4.3
+	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	gopkg.in/asaskevich/govalidator.v9 v9.0.0-20180315120708-ccb8e960c48f
 	gorm.io/driver/mysql v1.0.3
 	gorm.io/gorm v1.20.7
