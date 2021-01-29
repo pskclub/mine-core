@@ -15,7 +15,9 @@ type IMongoDBHelper interface {
 	Unwind(field string) bson.M
 	ReplaceRoot(options interface{}) bson.M
 	Or(options []bson.M) bson.M
+	PushOne(options bson.M) bson.M
 	Push(options []bson.M) bson.M
+	PullOne(options bson.M) bson.M
 	Pull(options []bson.M) bson.M
 }
 
@@ -108,6 +110,18 @@ func (m mongoDBHelper) Push(options []bson.M) bson.M {
 }
 
 func (m mongoDBHelper) Pull(options []bson.M) bson.M {
+	return bson.M{
+		"$pull": options,
+	}
+}
+
+func (m mongoDBHelper) PushOne(options bson.M) bson.M {
+	return bson.M{
+		"$push": options,
+	}
+}
+
+func (m mongoDBHelper) PullOne(options bson.M) bson.M {
 	return bson.M{
 		"$pull": options,
 	}
