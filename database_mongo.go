@@ -101,9 +101,6 @@ func (m MongoDB) getSkips(pageOptions *PageOptions) int64 {
 func (m MongoDB) FindPagination(dest interface{}, coll string, filter interface{}, pageOptions *PageOptions, opts ...*options.FindOptions) (*PageResponse, error) {
 	ctx, cancel := m.getContext()
 	defer cancel()
-	type Count struct {
-		Count int64 `bson:"_count"`
-	}
 
 	totalCount, err := m.Count(coll, filter)
 	if err != nil {
