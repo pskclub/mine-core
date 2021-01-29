@@ -105,6 +105,11 @@ func (m MongoDB) FindPagination(dest interface{}, coll string, filter interface{
 		Count int64 `bson:"_count"`
 	}
 
+	totalCount, err := m.Count(coll, filter)
+	if err != nil {
+		return nil, err
+	}
+
 	if pageOptions != nil {
 		skips := m.getSkips(pageOptions)
 		opts = append(opts, options.Find().SetLimit(pageOptions.Limit), options.Find().SetSkip(skips))
@@ -122,8 +127,7 @@ func (m MongoDB) FindPagination(dest interface{}, coll string, filter interface{
 	}
 
 	return &PageResponse{
-		//Total: totalModel.Count,
-		Total: 0,
+		Total: totalCount,
 		Limit: pageOptions.Limit,
 		Count: count,
 		Page:  pageOptions.Page,
