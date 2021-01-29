@@ -15,6 +15,8 @@ type IMongoDBHelper interface {
 	Unwind(field string) bson.M
 	ReplaceRoot(options interface{}) bson.M
 	Or(options []bson.M) bson.M
+	Push(options []bson.M) bson.M
+	Pull(options []bson.M) bson.M
 }
 
 func NewMongoHelper() IMongoDBHelper {
