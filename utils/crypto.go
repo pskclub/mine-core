@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 )
 
 func NewSha256(str string) string {
@@ -60,10 +59,8 @@ func HashAndSalt(pwd string) string {
 	// package along with DefaultCost & MaxCost.
 	// The cost can be any value you want provided it isn't lower
 	// than the MinCost (4)
-	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.MinCost)
-	if err != nil {
-		log.Println(err)
-	}
+	hash, _ := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.MinCost)
+
 	// GenerateFromPassword returns a byte slice so we need to
 	// convert the bytes to a string and return it
 	return string(hash)
@@ -75,7 +72,6 @@ func ComparePasswords(hashedPwd string, plainPwd string) bool {
 	byteHash := []byte(hashedPwd)
 	err := bcrypt.CompareHashAndPassword(byteHash, []byte(plainPwd))
 	if err != nil {
-		log.Println(err)
 		return false
 	}
 
