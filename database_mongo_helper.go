@@ -98,3 +98,15 @@ func (m mongoDBHelper) Or(options []bson.M) bson.M {
 		"$or": options,
 	}
 }
+
+func (m mongoDBHelper) Push(options []bson.M) bson.M {
+	return bson.M{
+		"$push": options,
+	}
+}
+
+func (m mongoDBHelper) Pull(options []bson.M) bson.M {
+	return bson.M{
+		"$pull": options,
+	}
+}
