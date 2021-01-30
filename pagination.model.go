@@ -29,6 +29,7 @@ func NewPagination(items interface{}, options *PageResponse) *Pagination {
 	m := &Pagination{
 		Page:  1,
 		Total: int64(reflect.ValueOf(items).Len()),
+		Limit: int64(reflect.ValueOf(items).Len()),
 	}
 	if options != nil {
 		m.Limit = options.Limit
