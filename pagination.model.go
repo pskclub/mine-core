@@ -3,7 +3,7 @@ package core
 type Pagination struct {
 	Page  int64       `json:"page"`
 	Total int64       `json:"total"`
-	Limit int64       `json:"limit"`
+	Limit int64       `json:"limit,omitempty"`
 	Items interface{} `json:"items"`
 }
 
@@ -24,7 +24,9 @@ type PageResponse struct {
 }
 
 func NewPagination(items interface{}, options *PageResponse) *Pagination {
-	m := &Pagination{}
+	m := &Pagination{
+		Page: 1,
+	}
 	if options != nil {
 		m.Limit = options.Limit
 		m.Page = options.Page
