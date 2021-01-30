@@ -121,8 +121,6 @@ func (c *HTTPContext) NewError(err error, errorType IError, args ...interface{})
 		if errorType.GetStatus() >= 500 {
 			fmt.Println(errWrap.ErrorStack())
 			c.Log().Error(errWrap, args...)
-		} else {
-			c.Log().Debug(errWrap.ErrorStack(), args)
 		}
 
 	}

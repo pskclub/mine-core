@@ -36,8 +36,6 @@ func (c *MQContext) NewError(err error, errorType IError, args ...interface{}) I
 		if errorType.GetStatus() >= 500 {
 			fmt.Println(errWrap.ErrorStack())
 			c.Log().Error(errWrap, args...)
-		} else {
-			c.Log().Debug(errWrap.ErrorStack(), args)
 		}
 
 	}
