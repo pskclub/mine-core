@@ -1,5 +1,7 @@
 package core
 
+import "reflect"
+
 type Pagination struct {
 	Page  int64       `json:"page"`
 	Total int64       `json:"total"`
@@ -25,7 +27,8 @@ type PageResponse struct {
 
 func NewPagination(items interface{}, options *PageResponse) *Pagination {
 	m := &Pagination{
-		Page: 1,
+		Page:  1,
+		Total: int64(reflect.ValueOf(items).Len()),
 	}
 	if options != nil {
 		m.Limit = options.Limit
