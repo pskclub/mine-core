@@ -50,6 +50,12 @@ type ENVConfig struct {
 	MQPassword string `mapstructure:"mq_password"`
 	MQPort     string `mapstructure:"mq_port"`
 
+	S3Endpoint  string `mapstructure:"s3_endpoint"`
+	S3AccessKey string `mapstructure:"s3_access_key"`
+	S3SecretKey string `mapstructure:"s3_secret_key"`
+	S3Bucket    string `mapstructure:"s3_bucket"`
+	S3IsHTTPS   bool   `mapstructure:"s3_https"`
+
 	CachePort string `mapstructure:"cache_port"`
 	CacheHost string `mapstructure:"cache_host"`
 }
