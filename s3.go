@@ -78,5 +78,6 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 	}
 	defer resp.Body.Close()
 
+	opts.ContentType = resp.Header.Get("Content-type")
 	return r.PutObject(bucketName, objectName, resp.Body, opts)
 }
