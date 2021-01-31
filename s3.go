@@ -84,5 +84,9 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 	}
 
 	opts.ContentType = resp.Header.Get("Content-type")
+	if opts.ContentType == "" {
+		opts.ContentType = "application/octet-stream"
+	}
+
 	return r.PutObject(bucketName, objectName, resp.Body, opts)
 }
