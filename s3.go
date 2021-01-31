@@ -7,6 +7,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"io"
+	"mime"
 	"net/http"
 )
 
@@ -88,5 +89,7 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 		opts.ContentType = "application/octet-stream"
 	}
 
-	return r.PutObject(bucketName, objectName, resp.Body, opts)
+	extensions, _ := mime.ExtensionsByType(opts.ContentType)
+	extension := extensions[0]
+	return r.PutObject(bucketName, objectName+extension, resp.Body, opts)
 }
