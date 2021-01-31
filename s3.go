@@ -6,6 +6,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"io"
+	"net/http"
 )
 
 type S3Config struct {
@@ -30,6 +31,7 @@ func (r S3Config) Connect() (IS3, error) {
 
 type IS3 interface {
 	PutObject(bucketName, objectName string, reader io.Reader, opts minio.PutObjectOptions) (*minio.UploadInfo, error)
+	PutObjectByURL(bucketName, objectName string, url string, opts minio.PutObjectOptions) (*minio.UploadInfo, error)
 }
 
 type s3 struct {
@@ -67,4 +69,14 @@ func (r s3) PutObject(bucketName, objectName string, reader io.Reader, opts mini
 	}
 
 	return &info, nil
+}
+
+func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio.PutObjectOptions) (*minio.UploadInfo, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return r.PutObject(bucketName, objectName, resp.Body, opts)
 }
