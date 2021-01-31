@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -77,6 +78,10 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		return nil, errors.New("Something went wrong")
+	}
 
 	opts.ContentType = resp.Header.Get("Content-type")
 	return r.PutObject(bucketName, objectName, resp.Body, opts)
