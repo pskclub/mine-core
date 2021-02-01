@@ -7,8 +7,8 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"io"
-	"mime"
 	"net/http"
+	"path"
 )
 
 type S3Config struct {
@@ -80,8 +80,9 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode > 299 {
+	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
 		return nil, errors.New("Something went wrong")
+
 	}
 
 	opts.ContentType = resp.Header.Get("Content-type")
@@ -89,7 +90,6 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 		opts.ContentType = "application/octet-stream"
 	}
 
-	extensions, _ := mime.ExtensionsByType(opts.ContentType)
-	extension := extensions[0]
+	extension := path.Base(resp.Request.URL.Path)
 	return r.PutObject(bucketName, objectName+extension, resp.Body, opts)
 }
