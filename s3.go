@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/pskclub/mine-core/utils"
 	"io"
 	"net/http"
 	"path"
+	"strconv"
+	"time"
 )
 
 type S3Config struct {
@@ -91,5 +94,8 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 	}
 
 	extension := path.Base(resp.Request.URL.Path)
-	return r.PutObject(bucketName, objectName+extension, resp.Body, opts)
+	folderName := "files/" + utils.GetCurrentDateTime().Format("20060102") + "/"
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	newFileName := timestamp + utils.GetShortID() + extension
+	return r.PutObject(bucketName, folderName+newFileName, resp.Body, opts)
 }
