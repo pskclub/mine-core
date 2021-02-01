@@ -10,7 +10,9 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -93,7 +95,7 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 		opts.ContentType = "application/octet-stream"
 	}
 
-	extension := path.Base(resp.Request.URL.Path)
+	extension := strings.TrimSuffix(path.Base(resp.Request.URL.Path), filepath.Ext(path.Base(resp.Request.URL.Path)))
 	folderName := "files/" + utils.GetCurrentDateTime().Format("20060102") + "/"
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	newFileName := timestamp + utils.GetShortID() + extension
