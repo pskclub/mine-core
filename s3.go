@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
-	"strings"
 )
 
 type S3Config struct {
@@ -92,6 +91,6 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 		opts.ContentType = "application/octet-stream"
 	}
 
-	extension := strings.TrimSuffix(path.Base(resp.Request.URL.Path), filepath.Ext(path.Base(resp.Request.URL.Path)))
+	extension := filepath.Ext(path.Base(resp.Request.URL.Path))
 	return r.PutObject(bucketName, objectName+extension, resp.Body, opts)
 }
