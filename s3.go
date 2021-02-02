@@ -76,7 +76,6 @@ func (r s3) PutObject(bucketName, objectName string, reader io.Reader, opts mini
 }
 
 func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio.PutObjectOptions) (*minio.UploadInfo, error) {
-	fmt.Println(111, url)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
