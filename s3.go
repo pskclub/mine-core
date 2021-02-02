@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"strconv"
 )
 
 type S3Config struct {
@@ -82,7 +83,7 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 300 {
-		return nil, errors.New("Something went wrong")
+		return nil, errors.New("Something went wrong , status code: " + strconv.Itoa(resp.StatusCode))
 
 	}
 
