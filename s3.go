@@ -1,11 +1,14 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/disintegration/imaging"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"image/jpeg"
 	"io"
 	"net/http"
 	"path"
@@ -35,7 +38,7 @@ func (r S3Config) Connect() (IS3, error) {
 
 type IS3 interface {
 	PutObject(bucketName, objectName string, reader io.Reader, opts minio.PutObjectOptions) (*minio.UploadInfo, error)
-	PutObjectByURL(bucketName, objectName string, url string, opts minio.PutObjectOptions) (*minio.UploadInfo, error)
+	PutObjectByURL(bucketName, objectName string, url string, opts minio.PutObjectOptions, uploadOptions *UploadOptions) (*minio.UploadInfo, error)
 }
 
 type s3 struct {
@@ -50,6 +53,12 @@ func NewS3(env *ENVConfig) *S3Config {
 		Bucket:    env.S3Bucket,
 		IsHTTPS:   env.S3IsHTTPS,
 	}
+}
+
+type UploadOptions struct {
+	Width   int64
+	Height  int64
+	Quality int64
 }
 
 func (r s3) PutObject(bucketName, objectName string, reader io.Reader, opts minio.PutObjectOptions) (*minio.UploadInfo, error) {
@@ -75,7 +84,7 @@ func (r s3) PutObject(bucketName, objectName string, reader io.Reader, opts mini
 	return &info, nil
 }
 
-func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio.PutObjectOptions) (*minio.UploadInfo, error) {
+func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio.PutObjectOptions, uploadOptions *UploadOptions) (*minio.UploadInfo, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -92,5 +101,26 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 	}
 
 	extension := filepath.Ext(path.Base(resp.Request.URL.Path))
+
+	var reader *bytes.Reader = nil
+	if uploadOptions != nil && (uploadOptions.Height != 0 || uploadOptions.Width != 0 || uploadOptions.Quality != 0) {
+		img, err := imaging.Decode(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		imgSrc := imaging.Resize(img, int(uploadOptions.Width), int(uploadOptions.Height), imaging.Linear)
+		buf := new(bytes.Buffer)
+		err = jpeg.Encode(buf, imgSrc, &jpeg.Options{Quality: int(uploadOptions.Quality)})
+		if err != nil {
+			return nil, err
+		}
+		reader = bytes.NewReader(buf.Bytes())
+	}
+
+	if reader != nil {
+		return r.PutObject(bucketName, objectName+extension, reader, opts)
+	}
+
 	return r.PutObject(bucketName, objectName+extension, resp.Body, opts)
 }

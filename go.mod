@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/bxcodec/faker/v3 v3.5.0
+	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/getsentry/sentry-go v0.8.0
 	github.com/go-errors/errors v1.1.1
 	github.com/go-redis/redis/v8 v8.4.0
