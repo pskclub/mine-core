@@ -78,7 +78,7 @@ func (r s3) PutObject(bucketName, objectName string, file io.Reader, opts minio.
 
 	var reader *bytes.Reader = nil
 	if uploadOptions != nil && (uploadOptions.Height != 0 || uploadOptions.Width != 0 || uploadOptions.Quality != 0) {
-		img, err := imaging.Decode(reader)
+		img, err := imaging.Decode(file)
 		if err != nil {
 			return nil, err
 		}
