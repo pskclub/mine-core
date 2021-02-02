@@ -81,7 +81,7 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 	}
 	defer resp.Body.Close()
 
-	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
+	if resp.StatusCode < 200 || resp.StatusCode > 300 {
 		return nil, errors.New("Something went wrong")
 
 	}
