@@ -37,7 +37,7 @@ func (r S3Config) Connect() (IS3, error) {
 }
 
 type IS3 interface {
-	PutObject(bucketName, objectName string, reader io.Reader, opts minio.PutObjectOptions) (*minio.UploadInfo, error)
+	PutObject(bucketName, objectName string, reader io.Reader, opts minio.PutObjectOptions, uploadOptions *UploadOptions) (*minio.UploadInfo, error)
 	PutObjectByURL(bucketName, objectName string, url string, opts minio.PutObjectOptions, uploadOptions *UploadOptions) (*minio.UploadInfo, error)
 }
 
@@ -61,7 +61,7 @@ type UploadOptions struct {
 	Quality int64
 }
 
-func (r s3) PutObject(bucketName, objectName string, reader io.Reader, opts minio.PutObjectOptions) (*minio.UploadInfo, error) {
+func (r s3) PutObject(bucketName, objectName string, file io.Reader, opts minio.PutObjectOptions, uploadOptions *UploadOptions) (*minio.UploadInfo, error) {
 	err := r.client.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{})
 	if err != nil {
 		isExists, err := r.client.BucketExists(context.Background(), bucketName)
@@ -76,9 +76,33 @@ func (r s3) PutObject(bucketName, objectName string, reader io.Reader, opts mini
 		}
 	}
 
-	info, err := r.client.PutObject(context.Background(), bucketName, objectName, reader, -1, opts)
-	if err != nil {
-		return nil, err
+	var reader *bytes.Reader = nil
+	if uploadOptions != nil && (uploadOptions.Height != 0 || uploadOptions.Width != 0 || uploadOptions.Quality != 0) {
+		img, err := imaging.Decode(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		imgSrc := imaging.Resize(img, int(uploadOptions.Width), int(uploadOptions.Height), imaging.Lanczos)
+		buf := new(bytes.Buffer)
+		err = jpeg.Encode(buf, imgSrc, &jpeg.Options{Quality: int(uploadOptions.Quality)})
+		if err != nil {
+			return nil, err
+		}
+		reader = bytes.NewReader(buf.Bytes())
+	}
+
+	var info minio.UploadInfo
+	if reader != nil {
+		info, err = r.client.PutObject(context.Background(), bucketName, objectName, reader, -1, opts)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		info, err = r.client.PutObject(context.Background(), bucketName, objectName, file, -1, opts)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &info, nil
@@ -102,25 +126,5 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 
 	extension := filepath.Ext(path.Base(resp.Request.URL.Path))
 
-	var reader *bytes.Reader = nil
-	if uploadOptions != nil && (uploadOptions.Height != 0 || uploadOptions.Width != 0 || uploadOptions.Quality != 0) {
-		img, err := imaging.Decode(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		imgSrc := imaging.Resize(img, int(uploadOptions.Width), int(uploadOptions.Height), imaging.Lanczos)
-		buf := new(bytes.Buffer)
-		err = jpeg.Encode(buf, imgSrc, &jpeg.Options{Quality: int(uploadOptions.Quality)})
-		if err != nil {
-			return nil, err
-		}
-		reader = bytes.NewReader(buf.Bytes())
-	}
-
-	if reader != nil {
-		return r.PutObject(bucketName, objectName+extension, reader, opts)
-	}
-
-	return r.PutObject(bucketName, objectName+extension, resp.Body, opts)
+	return r.PutObject(bucketName, objectName+extension, resp.Body, opts, uploadOptions)
 }
