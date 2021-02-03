@@ -83,7 +83,7 @@ func (r s3) PutObject(bucketName, objectName string, file io.Reader, opts minio.
 			return nil, err
 		}
 
-		imgSrc := imaging.Resize(img, int(uploadOptions.Width), int(uploadOptions.Height), imaging.Lanczos)
+		imgSrc := imaging.Fit(img, int(uploadOptions.Width), int(uploadOptions.Height), imaging.Lanczos)
 		buf := new(bytes.Buffer)
 		err = jpeg.Encode(buf, imgSrc, &jpeg.Options{Quality: int(uploadOptions.Quality)})
 		if err != nil {
