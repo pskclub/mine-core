@@ -29,6 +29,14 @@ func (c Error) GetStatus() int {
 	return c.Status
 }
 
+func (c Error) GetCode() string {
+	return c.Code
+}
+
+func (c Error) GetMessage() string {
+	return c.Code
+}
+
 func Recover(textError string) {
 	if r := recover(); r != nil {
 		panic(textError)
