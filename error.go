@@ -9,7 +9,6 @@ type IError interface {
 	Error() string
 	GetStatus() int
 	GetCode() string
-	GetMessage() string
 	JSON() interface{}
 }
 
@@ -32,10 +31,6 @@ func (c Error) GetStatus() int {
 }
 
 func (c Error) GetCode() string {
-	return c.Code
-}
-
-func (c Error) GetMessage() string {
 	return c.Code
 }
 

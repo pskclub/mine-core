@@ -26,6 +26,10 @@ func (f FieldError) JSON() interface{} {
 	return f
 }
 
+func (f FieldError) GetCode() string {
+	return f.Code
+}
+
 type jsonErr struct {
 	Code    string      `json:"code"`
 	Message string      `json:"message"`
