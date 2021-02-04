@@ -80,7 +80,8 @@ func (m mq) PublishJSON(name string, data interface{}, options *MQPublishOptions
 	}
 
 	if NewEnv().Config().LogLevel == logrus.DebugLevel {
-		fmt.Printf("Publish a message at '%s' channel", name)
+		fmt.Println(fmt.Sprintf("Publish a message at '%s' channel", name))
+
 	}
 
 	return nil
@@ -135,7 +136,7 @@ func (m mq) Consume(name string, onConsume func(message amqp.Delivery), options 
 	go func() {
 		for d := range msgs {
 			if NewEnv().Config().LogLevel == logrus.DebugLevel {
-				fmt.Printf("Received a message at '%s' channel", name)
+				fmt.Println(fmt.Sprintf("Received a message at '%s' channel", name))
 			}
 			onConsume(d)
 		}
