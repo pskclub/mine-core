@@ -8,6 +8,8 @@ import (
 type IError interface {
 	Error() string
 	GetStatus() int
+	GetCode() string
+	GetMessage() string
 	JSON() interface{}
 }
 
