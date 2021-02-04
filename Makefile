@@ -1,7 +1,7 @@
 test:
 	go test ./...
 
-tag:
+tags:
 	./tag
 
 install:
