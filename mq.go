@@ -15,6 +15,7 @@ type MQ struct {
 }
 
 type MQPublishOptions struct {
+	MessageID    string
 	Exchange     string
 	Durable      bool
 	AutoDelete   bool
@@ -71,6 +72,7 @@ func (m mq) PublishJSON(name string, data interface{}, options *MQPublishOptions
 		options.Mandatory, // mandatory
 		options.Immediate, // immediate
 		amqp.Publishing{
+			MessageId:    options.MessageID,
 			DeliveryMode: options.DeliveryMode,
 			ContentType:  "text/plain",
 			Body:         []byte(utils.JSONToString(data)),
