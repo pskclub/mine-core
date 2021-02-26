@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	"github.com/getsentry/sentry-go"
+	"github.com/go-errors/errors"
 	"github.com/pskclub/mine-core/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
@@ -138,6 +140,9 @@ func (m mq) Consume(name string, onConsume func(message amqp.Delivery), options 
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
+				errmsg := errors.New(fmt.Sprintf("%v", err))
+				fmt.Println(errmsg)
+				CaptureSimpleError(sentry.LevelFatal, errors.New(fmt.Sprintf("%v", err)))
 			}
 		}()
 
