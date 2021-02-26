@@ -58,6 +58,10 @@ type ENVConfig struct {
 
 	CachePort string `mapstructure:"cache_port"`
 	CacheHost string `mapstructure:"cache_host"`
+
+	ELSAddress  string `mapstructure:"els_address"`
+	ELSUser     string `mapstructure:"els_user"`
+	ELSPassword string `mapstructure:"els_password"`
 }
 
 type ENVType struct {
