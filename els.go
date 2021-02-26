@@ -1,6 +1,10 @@
 package core
 
-import "github.com/elastic/go-elasticsearch/v7"
+import (
+	"bytes"
+	"encoding/json"
+	"github.com/elastic/go-elasticsearch/v7"
+)
 
 type ELS struct {
 	Address  string
@@ -14,6 +18,7 @@ type els struct {
 
 type IELS interface {
 	Client() *elasticsearch.Client
+	CreateIndex(name string, body interface{}, options *ELSCreateIndexOptions) error
 }
 
 func (e ELS) Connect() (IELS, error) {
@@ -25,7 +30,7 @@ func (e ELS) Connect() (IELS, error) {
 	if err != nil {
 		return nil, err
 	}
-	client.Search()
+
 	return &els{connection: client}, nil
 }
 
@@ -39,4 +44,25 @@ func NewELS(env *ENVConfig) *ELS {
 
 func (e els) Client() *elasticsearch.Client {
 	return e.connection
+}
+
+type ELSCreateIndexOptions struct {
+}
+
+func (e els) CreateIndex(name string, body interface{}, options *ELSCreateIndexOptions) error {
+	_, err := e.Client().Indices.Create(name)
+	if err != nil {
+		return err
+	}
+
+	if body != nil {
+		var buf bytes.Buffer
+		_ = json.NewEncoder(&buf).Encode(body)
+		_, err = e.Client().Indices.PutMapping(&buf, e.Client().Indices.PutMapping.WithIndex(name))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
