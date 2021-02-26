@@ -17,14 +17,7 @@ type MQContext struct {
 }
 
 func (c *MQContext) AddConsumer(handlerFunc func(ctx IMQContext)) {
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-			}
-		}()
-
-		handlerFunc(c)
-	}()
+	go handlerFunc(c)
 }
 
 type MQContextOptions struct {

@@ -136,6 +136,11 @@ func (m mq) Consume(name string, onConsume func(message amqp.Delivery), options 
 
 	forever := make(chan bool)
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+			}
+		}()
+
 		for d := range msgs {
 			if NewEnv().Config().LogLevel == logrus.DebugLevel {
 				fmt.Println(fmt.Sprintf("Received a message at '%s' channel", name))
