@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-errors/errors"
+	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
 	"github.com/pskclub/mine-core/consts"
+	"github.com/pskclub/mine-core/errmsgs"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type IHTTPContext interface {
@@ -26,6 +29,29 @@ type HTTPContext struct {
 	echo.Context
 	IContext
 	logger ILogger
+}
+
+func (c *HTTPContext) WithSaveCache(data interface{}, key string, duration time.Duration) interface{} {
+	err := c.Cache().SetJSON(key, data, duration)
+	if err != nil {
+		c.NewError(err, errmsgs.CacheError)
+	}
+
+	return data
+}
+
+func (c *HTTPContext) WithGetCache(h HandlerFunc, key string) error {
+	var item interface{}
+	err := c.Cache().GetJSON(&item, key)
+	if err != nil && !errors.Is(err, redis.Nil) {
+		c.NewError(err, errmsgs.DBError)
+	}
+
+	if item != nil {
+		return c.JSON(http.StatusOK, item)
+	}
+
+	return h(c)
 }
 
 func (c *HTTPContext) GetPageOptions() *PageOptions {
