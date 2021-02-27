@@ -60,7 +60,7 @@ func (e els) CreateIndex(name string, body interface{}, options *ELSCreateIndexO
 	}
 
 	if body != nil {
-		_, err = e.Client().Indices.PutMapping(e.interfaceToReader(body), esapi.IndicesPutMapping.WithIndex(name))
+		_, err = e.Client().Indices.PutMapping(e.interfaceToReader(body), e.Client().Indices.PutMapping.WithIndex(name))
 		if err != nil {
 			return err
 		}
