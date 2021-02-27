@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v7/esapi"
+	"github.com/pskclub/mine-core/utils"
+	"io"
 )
 
 type ELS struct {
@@ -19,6 +22,7 @@ type els struct {
 type IELS interface {
 	Client() *elasticsearch.Client
 	CreateIndex(name string, body interface{}, options *ELSCreateIndexOptions) error
+	Create(dest interface{}, index string, id string, body interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error)
 }
 
 func (e ELS) Connect() (IELS, error) {
@@ -56,13 +60,31 @@ func (e els) CreateIndex(name string, body interface{}, options *ELSCreateIndexO
 	}
 
 	if body != nil {
-		var buf bytes.Buffer
-		_ = json.NewEncoder(&buf).Encode(body)
-		_, err = e.Client().Indices.PutMapping(&buf, e.Client().Indices.PutMapping.WithIndex(name))
+		_, err = e.Client().Indices.PutMapping(e.interfaceToReader(body), esapi.IndicesPutMapping.WithIndex(name))
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+type ELSCreateCreateOptions struct {
+}
+
+func (e els) Create(dest interface{}, index string, id string, body interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error) {
+	res, err := e.Client().Create(index, id, e.interfaceToReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	_ = utils.JSONParse(utils.StringToBytes(res.String()), dest)
+
+	return res, nil
+}
+
+func (e els) interfaceToReader(body interface{}) io.Reader {
+	var buf bytes.Buffer
+	_ = json.NewEncoder(&buf).Encode(body)
+	return &buf
 }
