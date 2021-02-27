@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-errors/errors"
-	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
 	"github.com/pskclub/mine-core/consts"
@@ -23,7 +22,6 @@ type IHTTPContext interface {
 	GetPageOptions() *PageOptions
 	GetUserAgent() *user_agent.UserAgent
 	WithSaveCache(data interface{}, key string, duration time.Duration) interface{}
-	WithGetCache(h HandlerFunc, key string) error
 }
 
 type HTTPContext struct {
@@ -42,23 +40,6 @@ func (c *HTTPContext) WithSaveCache(data interface{}, key string, duration time.
 	}
 
 	return data
-}
-
-func (c *HTTPContext) WithGetCache(h HandlerFunc, key string) error {
-	var item interface{}
-	err := c.Cache().GetJSON(&item, key)
-	if err != nil && !errors.Is(err, redis.Nil) {
-		c.NewError(err, Error{
-			Status:  http.StatusInternalServerError,
-			Code:    "DATABASE_ERROR",
-			Message: "database internal error"})
-	}
-
-	if item != nil {
-		return c.JSON(http.StatusOK, item)
-	}
-
-	return h(c)
 }
 
 func (c *HTTPContext) GetPageOptions() *PageOptions {
