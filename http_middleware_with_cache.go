@@ -7,12 +7,12 @@ import (
 	"net/http"
 )
 
-func HTTPWithCache(key string) echo.MiddlewareFunc {
+func HTTPWithCache(key func(IHTTPContext) string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			cc := c.(IHTTPContext)
 			var item interface{}
-			err := cc.Cache().GetJSON(&item, key)
+			err := cc.Cache().GetJSON(&item, key(cc))
 			if err != nil && !errors.Is(err, redis.Nil) {
 				cc.NewError(err, Error{
 					Status:  http.StatusInternalServerError,
