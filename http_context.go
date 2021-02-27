@@ -22,6 +22,8 @@ type IHTTPContext interface {
 	BindOnly(i interface{}) IError
 	GetPageOptions() *PageOptions
 	GetUserAgent() *user_agent.UserAgent
+	WithSaveCache(data interface{}, key string, duration time.Duration) interface{}
+	WithGetCache(h HandlerFunc, key string) error
 }
 
 type HTTPContext struct {
