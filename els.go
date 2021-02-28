@@ -26,7 +26,7 @@ type IELS interface {
 	Client() *elasticsearch.Client
 	CreateIndex(name string, body map[string]interface{}, options *ELSCreateIndexOptions) error
 	Create(dest interface{}, index string, id string, body interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error)
-	CreateOrUpdate(dest interface{}, index string, id string, body interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error)
+	CreateOrUpdate(dest interface{}, index string, id string, body interface{}, options *ELSUpdateOptions) (*esapi.Response, error)
 	SearchPagination(dest interface{}, index string, body map[string]interface{}, pageOptions *PageOptions, opts *ELSCreateSearchOptions) (*PageResponse, error)
 }
 
