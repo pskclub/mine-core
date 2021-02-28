@@ -10,6 +10,7 @@ import (
 	"github.com/tidwall/gjson"
 	"io"
 	"io/ioutil"
+	"reflect"
 )
 
 type ELS struct {
@@ -121,7 +122,7 @@ func (e els) SearchPagination(dest interface{}, index string, body map[string]in
 	return &PageResponse{
 		Total:   result[1].Int(),
 		Limit:   pageOptions.Limit,
-		Count:   int64(len(dest.([]interface{}))),
+		Count:   int64(reflect.ValueOf(dest).Elem().Len()),
 		Page:    pageOptions.Page,
 		Q:       pageOptions.Q,
 		OrderBy: pageOptions.OrderBy,
