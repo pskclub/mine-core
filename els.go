@@ -25,8 +25,8 @@ type els struct {
 type IELS interface {
 	Client() *elasticsearch.Client
 	CreateIndex(name string, body map[string]interface{}, options *ELSCreateIndexOptions) error
-	Create(dest interface{}, index string, id string, body map[string]interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error)
-	Upsert(dest interface{}, index string, id string, body map[string]interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error)
+	Create(dest interface{}, index string, id string, body interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error)
+	CreateOrUpdate(dest interface{}, index string, id string, body map[string]interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error)
 	SearchPagination(dest interface{}, index string, body map[string]interface{}, pageOptions *PageOptions, opts *ELSCreateSearchOptions) (*PageResponse, error)
 }
 
@@ -81,7 +81,7 @@ func (e els) CreateIndex(name string, body map[string]interface{}, options *ELSC
 type ELSCreateCreateOptions struct {
 }
 
-func (e els) Create(dest interface{}, index string, id string, body map[string]interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error) {
+func (e els) Create(dest interface{}, index string, id string, body interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error) {
 	res, err := e.Client().Create(index, id, e.interfaceToReader(body))
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (e els) SearchPagination(dest interface{}, index string, body map[string]in
 	}, nil
 }
 
-func (e els) Upsert(dest interface{}, index string, id string, body map[string]interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error) {
+func (e els) CreateOrUpdate(dest interface{}, index string, id string, body map[string]interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error) {
 	newBody := Map{
 		"doc":           body,
 		"doc_as_upsert": true,
