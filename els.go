@@ -128,7 +128,10 @@ func (e els) SearchPagination(dest interface{}, index string, body map[string]in
 	}, nil
 }
 
-func (e els) CreateOrUpdate(dest interface{}, index string, id string, body interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error) {
+type ELSUpdateOptions struct {
+}
+
+func (e els) CreateOrUpdate(dest interface{}, index string, id string, body interface{}, options *ELSUpdateOptions) (*esapi.Response, error) {
 	newBody := Map{
 		"doc":           body,
 		"doc_as_upsert": true,
