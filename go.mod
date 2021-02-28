@@ -22,6 +22,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125
 	github.com/thedevsaddam/gojsonq/v2 v2.5.2
+	github.com/tidwall/gjson v1.6.8 // indirect
 	go.mongodb.org/mongo-driver v1.4.6
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	gopkg.in/asaskevich/govalidator.v9 v9.0.0-20180315120708-ccb8e960c48f
