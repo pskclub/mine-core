@@ -28,6 +28,7 @@ type IELS interface {
 	CreateIndex(name string, body map[string]interface{}, options *ELSCreateIndexOptions) error
 	Create(dest interface{}, index string, id string, body interface{}, options *ELSCreateIndexOptions) (*esapi.Response, error)
 	CreateOrUpdate(dest interface{}, index string, id string, body interface{}, options *ELSUpdateOptions) (*esapi.Response, error)
+	Update(dest interface{}, index string, id string, body interface{}, options *ELSUpdateOptions) (*esapi.Response, error)
 	SearchPagination(dest interface{}, index string, body map[string]interface{}, pageOptions *PageOptions, opts *ELSCreateSearchOptions) (*PageResponse, error)
 }
 
@@ -138,6 +139,21 @@ func (e els) CreateOrUpdate(dest interface{}, index string, id string, body inte
 		"doc_as_upsert": true,
 	}
 	res, err := e.Client().Update(index, id, e.interfaceToReader(newBody))
+	if err != nil {
+		return nil, err
+	}
+
+	if res.IsError() {
+		return nil, errors.New(res.String())
+	}
+
+	_ = utils.JSONParse(utils.StringToBytes(res.String()), dest)
+
+	return res, nil
+}
+
+func (e els) Update(dest interface{}, index string, id string, body interface{}, options *ELSUpdateOptions) (*esapi.Response, error) {
+	res, err := e.Client().Update(index, id, e.interfaceToReader(body))
 	if err != nil {
 		return nil, err
 	}
