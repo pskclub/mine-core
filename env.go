@@ -80,6 +80,16 @@ func NewENVPath(path string) IENV {
 	viper.SetEnvPrefix("APP")
 	viper.AutomaticEnv()
 	viper.ReadInConfig()
+	viper.BindEnv(
+		"log_host",
+		"host", "env", "service",
+		"sentry_dsn", "db_driver", "db_host", "db_host",
+		"db_name", "db_user", "db_password", "db_port", "db_mongo_host",
+		"db_mongo_name", "db_mongo_username", "db_mongo_password", "db_mongo_port",
+		"mq_host", "mq_user", "mq_password", "mq_port", "s3_endpoint",
+		"s3_access_key", "s3_secret_key", "s3_bucket", "s3_https",
+		"cache_port", "cache_host", "els_address", "els_user", "els_password",
+	)
 
 	env := &ENVConfig{}
 	err := viper.Unmarshal(env)
