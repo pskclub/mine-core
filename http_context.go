@@ -43,6 +43,28 @@ func (c *HTTPContext) WithSaveCache(data interface{}, key string, duration time.
 	return data
 }
 
+type PageOptionsOptions struct {
+	OrderByAllowed []string
+}
+
+func (c *HTTPContext) GetPageOptionsWithOptions(options *PageOptionsOptions) *PageOptions {
+	pageOptions := c.GetPageOptions()
+	if options != nil {
+		newOrderBy := make([]string, 0)
+		for _, field := range pageOptions.OrderBy {
+			parameters := strings.Split(field, " ")
+			sortBy := parameters[0]
+			for _, name := range options.OrderByAllowed {
+				if sortBy == name {
+					newOrderBy = append(newOrderBy, field)
+				}
+			}
+		}
+		pageOptions.OrderBy = newOrderBy
+	}
+	return pageOptions
+}
+
 func (c *HTTPContext) GetPageOptions() *PageOptions {
 	limit, _ := strconv.ParseInt(c.QueryParam("limit"), 10, 64)
 	page, _ := strconv.ParseInt(c.QueryParam("page"), 10, 64)
