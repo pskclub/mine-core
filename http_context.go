@@ -21,6 +21,7 @@ type IHTTPContext interface {
 	BindWithValidate(ctx IValidateContext) IError
 	BindOnly(i interface{}) IError
 	GetPageOptions() *PageOptions
+	GetPageOptionsWithOptions(options *PageOptionsOptions) *PageOptions
 	GetUserAgent() *user_agent.UserAgent
 	WithSaveCache(data interface{}, key string, duration time.Duration) interface{}
 }
