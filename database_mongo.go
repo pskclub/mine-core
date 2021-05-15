@@ -57,6 +57,7 @@ type IMongoDB interface {
 	Create(coll string, document interface{}, opts ...*options.InsertOneOptions) (*mongo.InsertOneResult, error)
 	FindAggregate(dest interface{}, coll string, pipeline []bson.M, opts ...*options.AggregateOptions) error
 	FindAggregatePagination(dest interface{}, coll string, pipeline []bson.M, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error)
+	FindAggregatePaginationCustomTotal(dest interface{}, coll string, pipeline []bson.M, pipelineTotalCount []bson.M, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error)
 	FindAggregateOne(dest interface{}, coll string, pipeline []bson.M, opts ...*options.AggregateOptions) error
 	Find(dest interface{}, coll string, filter interface{}, opts ...*options.FindOptions) error
 	FindPagination(dest interface{}, coll string, filter interface{}, pageOptions *PageOptions, opts ...*options.FindOptions) (*PageResponse, error)
@@ -160,20 +161,57 @@ func (m MongoDB) FindAggregatePagination(dest interface{}, coll string, pipeline
 	totalModel := &Count{}
 
 	countPipeline := make([]bson.M, 0)
-	for _, m := range pipeline {
-		_, ok := m["$lookup"]
-		_, ok2 := m["$set"]
-		_, ok3 := m["$sort"]
-
-		if !ok && !ok2 && !ok3 {
-			countPipeline = append(countPipeline, m)
-		}
-	}
 	countPipeline = append(countPipeline, bson.M{
 		"$count": "_count",
 	})
 
 	err := m.FindAggregateOne(totalModel, coll, countPipeline)
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+		return nil, err
+	}
+
+	if pageOptions != nil {
+		skips := m.getSkips(pageOptions)
+		pipeline = append(pipeline,
+			bson.M{
+				"$skip": skips,
+			}, bson.M{
+				"$limit": pageOptions.Limit,
+			})
+	}
+
+	cur, err := m.DB().Collection(coll).Aggregate(ctx, pipeline, opts...)
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var count int64 = 0
+	for cur.Next(ctx) {
+		count++
+	}
+
+	return &PageResponse{
+		Total: totalModel.Count,
+		Limit: pageOptions.Limit,
+		Count: count,
+		Page:  pageOptions.Page,
+		Q:     pageOptions.Q,
+	}, cur.All(ctx, dest)
+}
+
+func (m MongoDB) FindAggregatePaginationCustomTotal(dest interface{}, coll string, pipeline []bson.M, pipelineTotalCount []bson.M, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error) {
+	ctx, cancel := m.getContext()
+	defer cancel()
+	type Count struct {
+		Count int64 `bson:"_count"`
+	}
+	totalModel := &Count{}
+	pipelineTotalCount = append(pipelineTotalCount, bson.M{
+		"$count": "_count",
+	})
+
+	err := m.FindAggregateOne(totalModel, coll, pipelineTotalCount)
 	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, err
 	}
