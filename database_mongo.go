@@ -160,7 +160,7 @@ func (m MongoDB) FindAggregatePagination(dest interface{}, coll string, pipeline
 	}
 	totalModel := &Count{}
 
-	countPipeline := make([]bson.M, 0)
+	countPipeline := pipeline
 	countPipeline = append(countPipeline, bson.M{
 		"$count": "_count",
 	})
