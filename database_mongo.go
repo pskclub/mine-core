@@ -162,7 +162,10 @@ func (m MongoDB) FindAggregatePagination(dest interface{}, coll string, pipeline
 	countPipeline := make([]bson.M, 0)
 	for _, m := range pipeline {
 		_, ok := m["$lookup"]
-		if !ok {
+		_, ok2 := m["$set"]
+		_, ok3 := m["$sort"]
+
+		if !ok && !ok2 && !ok3 {
 			countPipeline = append(countPipeline, m)
 		}
 	}
