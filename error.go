@@ -8,6 +8,7 @@ import (
 type IError interface {
 	Error() string
 	GetStatus() int
+	GetCode() string
 	JSON() interface{}
 	OriginalError() error
 }
@@ -29,6 +30,10 @@ func (c Error) Error() string {
 
 func (c Error) GetStatus() int {
 	return c.Status
+}
+
+func (c Error) GetCode() string {
+	return c.Code
 }
 
 func (c Error) OriginalError() error {

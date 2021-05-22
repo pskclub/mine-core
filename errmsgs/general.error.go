@@ -32,6 +32,11 @@ var (
 		Code:    "CACHE_ERROR",
 		Message: "cache internal error"}
 
+	ELSError = core.Error{
+		Status:  http.StatusInternalServerError,
+		Code:    "ELS_ERROR",
+		Message: "elasticsearch internal error"}
+
 	InternalServerError = core.Error{
 		Status:  http.StatusInternalServerError,
 		Code:    "INTERNAL_SERVER_ERROR",

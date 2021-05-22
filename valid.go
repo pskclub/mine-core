@@ -74,6 +74,10 @@ func (v *Valid) GetStatus() int {
 	return http.StatusBadRequest
 }
 
+func (v *Valid) GetCode() string {
+	return "INVALID_PARAMS"
+}
+
 func (v *Valid) JSON() interface{} {
 	fields := make(map[string]jsonErr)
 	for _, err := range v.err.errors {

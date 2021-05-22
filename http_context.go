@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type IHTTPContext interface {
@@ -21,6 +22,7 @@ type IHTTPContext interface {
 	GetPageOptions() *PageOptions
 	GetPageOptionsWithOptions(options *PageOptionsOptions) *PageOptions
 	GetUserAgent() *user_agent.UserAgent
+	WithSaveCache(data interface{}, key string, duration time.Duration) interface{}
 }
 
 type HTTPContext struct {
@@ -31,6 +33,40 @@ type HTTPContext struct {
 
 type PageOptionsOptions struct {
 	OrderByAllowed []string
+}
+
+func (c *HTTPContext) WithSaveCache(data interface{}, key string, duration time.Duration) interface{} {
+	err := c.Cache().SetJSON(key, data, duration)
+	if err != nil {
+		c.NewError(err, Error{
+			Status:  http.StatusInternalServerError,
+			Code:    "CACHE_ERROR",
+			Message: "cache internal error"})
+	}
+
+	return data
+}
+
+type PageOptionsOptions struct {
+	OrderByAllowed []string
+}
+
+func (c *HTTPContext) GetPageOptionsWithOptions(options *PageOptionsOptions) *PageOptions {
+	pageOptions := c.GetPageOptions()
+	if options != nil {
+		newOrderBy := make([]string, 0)
+		for _, field := range pageOptions.OrderBy {
+			parameters := strings.Split(field, " ")
+			sortBy := parameters[0]
+			for _, name := range options.OrderByAllowed {
+				if sortBy == name {
+					newOrderBy = append(newOrderBy, field)
+				}
+			}
+		}
+		pageOptions.OrderBy = newOrderBy
+	}
+	return pageOptions
 }
 
 func (c *HTTPContext) GetPageOptions() *PageOptions {
@@ -182,4 +218,37 @@ func (c *HTTPContext) Log() ILogger {
 
 func (c HTTPContext) GetUserAgent() *user_agent.UserAgent {
 	return user_agent.New(c.Request().UserAgent())
+}
+
+func (c *HTTPContext) genOrderBy(s string) []string {
+	orderBy := make([]string, 0)
+	fields := strings.Split(s, ",")
+	for _, field := range fields {
+		spaceParameters := strings.Split(field, " ")
+		bracketParameters := strings.Split(field, "(")
+		if len(spaceParameters) == 1 && len(bracketParameters) == 1 && spaceParameters[0] != "" {
+			orderBy = append(orderBy, fmt.Sprintf("%s desc", spaceParameters[0]))
+		} else if len(spaceParameters) == 2 {
+			name := spaceParameters[0]
+			if name != "" {
+				shortingParameter := spaceParameters[1]
+				if shortingParameter == "asc" {
+					orderBy = append(orderBy, fmt.Sprintf("%s %s", name, shortingParameter))
+				} else {
+					orderBy = append(orderBy, fmt.Sprintf("%s desc", name))
+				}
+			}
+		} else if len(bracketParameters) == 2 {
+			name := strings.TrimSuffix(bracketParameters[1], ")")
+			if name != "" {
+				shortingParameter := bracketParameters[0]
+				if shortingParameter == "asc" {
+					orderBy = append(orderBy, fmt.Sprintf("%s %s", name, shortingParameter))
+				} else {
+					orderBy = append(orderBy, fmt.Sprintf("%s desc", name))
+				}
+			}
+		}
+	}
+	return orderBy
 }

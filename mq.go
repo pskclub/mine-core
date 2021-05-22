@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	"github.com/getsentry/sentry-go"
+	"github.com/go-errors/errors"
 	"github.com/pskclub/mine-core/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
@@ -15,6 +17,7 @@ type MQ struct {
 }
 
 type MQPublishOptions struct {
+	MessageID    string
 	Exchange     string
 	Durable      bool
 	AutoDelete   bool
@@ -71,6 +74,7 @@ func (m mq) PublishJSON(name string, data interface{}, options *MQPublishOptions
 		options.Mandatory, // mandatory
 		options.Immediate, // immediate
 		amqp.Publishing{
+			MessageId:    options.MessageID,
 			DeliveryMode: options.DeliveryMode,
 			ContentType:  "text/plain",
 			Body:         []byte(utils.JSONToString(data)),
@@ -134,6 +138,14 @@ func (m mq) Consume(name string, onConsume func(message amqp.Delivery), options 
 
 	forever := make(chan bool)
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				errmsg := errors.New(fmt.Sprintf("%v", err))
+				fmt.Println(errmsg)
+				CaptureSimpleError(sentry.LevelFatal, errors.New(fmt.Sprintf("%v", err)))
+			}
+		}()
+
 		for d := range msgs {
 			if NewEnv().Config().LogLevel == logrus.DebugLevel {
 				fmt.Println(fmt.Sprintf("Received a message at '%s' channel", name))

@@ -1,8 +1,8 @@
 package core
 
 import (
-	"github.com/stretchr/testify/mock"
 	"github.com/pskclub/mine-core/consts"
+	"github.com/stretchr/testify/mock"
 	"gorm.io/gorm"
 )
 
@@ -30,6 +30,11 @@ type ContextMock struct {
 func (m *ContextMock) Cache() ICache {
 	args := m.Called()
 	return args.Get(0).(ICache)
+}
+
+func (m *ContextMock) ELS() IELS {
+	args := m.Called()
+	return args.Get(0).(IELS)
 }
 
 func (m *ContextMock) MQ() IMQ {

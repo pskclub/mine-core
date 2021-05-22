@@ -20,6 +20,7 @@ type IContext interface {
 	Requester() IRequester
 	Cache() ICache
 	Caches(name string) ICache
+	ELS() IELS
 }
 
 type ContextOptions struct {
@@ -31,6 +32,7 @@ type ContextOptions struct {
 	Caches      map[string]ICache
 	ENV         IENV
 	MQ          IMQ
+	ELS         IELS
 	contextType consts.ContextType
 }
 
@@ -45,6 +47,7 @@ func NewContext(options *ContextOptions) IContext {
 		cache:          options.Cache,
 		caches:         options.Caches,
 		mq:             options.MQ,
+		els:            options.ELS,
 	}
 }
 
@@ -57,12 +60,17 @@ type coreContext struct {
 	databaseMongo  IMongoDB
 	databasesMongo map[string]IMongoDB
 	mq             IMQ
+	els            IELS
 	env            IENV
 	logger         ILogger
 }
 
 func (c *coreContext) Cache() ICache {
 	return c.cache
+}
+
+func (c *coreContext) ELS() IELS {
+	return c.els
 }
 
 func (c *coreContext) MQ() IMQ {

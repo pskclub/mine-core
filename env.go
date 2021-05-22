@@ -58,6 +58,10 @@ type ENVConfig struct {
 
 	CachePort string `mapstructure:"cache_port"`
 	CacheHost string `mapstructure:"cache_host"`
+
+	ELSAddress  string `mapstructure:"els_address"`
+	ELSUser     string `mapstructure:"els_user"`
+	ELSPassword string `mapstructure:"els_password"`
 }
 
 type ENVType struct {
@@ -76,6 +80,20 @@ func NewENVPath(path string) IENV {
 	viper.SetEnvPrefix("APP")
 	viper.AutomaticEnv()
 	viper.ReadInConfig()
+	envKeys := []string{
+		"LOG_HOST",
+		"HOST", "ENV", "SERVICE",
+		"SENTRY_DSN", "DB_DRIVER", "DB_HOST", "DB_HOST",
+		"DB_NAME", "DB_USER", "DB_PASSWORD", "DB_PORT", "DB_MONGO_HOST",
+		"DB_MONGO_NAME", "DB_MONGO_USERNAME", "DB_MONGO_PASSWORD", "DB_MONGO_PORT",
+		"MQ_HOST", "MQ_USER", "MQ_PASSWORD", "MQ_PORT", "S3_ENDPOINT",
+		"S3_ACCESS_KEY", "S3_SECRET_KEY", "S3_BUCKET", "S3_HTTPS",
+		"CACHE_PORT", "CACHE_HOST", "ELS_ADDRESS", "ELS_USER", "ELS_PASSWORD",
+	}
+
+	for _, key := range envKeys {
+		viper.BindEnv(key)
+	}
 
 	env := &ENVConfig{}
 	err := viper.Unmarshal(env)
