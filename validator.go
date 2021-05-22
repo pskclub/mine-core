@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"gopkg.in/asaskevich/govalidator.v9"
 	"net/http"
 	"strings"
@@ -20,6 +21,14 @@ func (FieldError) GetStatus() int {
 
 func (f FieldError) Error() string {
 	return "ErrorCode : " + f.Code
+}
+
+func (f FieldError) OriginalError() error {
+	return errors.New(f.Error())
+}
+
+func (f FieldError) OriginalErrorMessage() string {
+	return f.Error()
 }
 
 func (f FieldError) JSON() interface{} {

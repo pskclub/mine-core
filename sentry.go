@@ -18,7 +18,12 @@ func CaptureError(ctx IContext, level sentry.Level, err error, args ...interface
 			for i, arg := range args {
 				scope.SetExtra(fmt.Sprintf("ARG-%v", i), arg)
 			}
-			sentry.CaptureException(err)
+
+			if ierr, ok := err.(IError); ok {
+				sentry.CaptureException(ierr.OriginalError())
+			} else {
+				sentry.CaptureException(err)
+			}
 		})
 	}
 }
@@ -38,7 +43,12 @@ func CaptureHTTPError(ctx IHTTPContext, level sentry.Level, err error, args ...i
 				for i, arg := range args {
 					scope.SetExtra(fmt.Sprintf("ARG-%v", i), arg)
 				}
-				hub.CaptureException(err)
+
+				if ierr, ok := err.(IError); ok {
+					hub.CaptureException(ierr.OriginalError())
+				} else {
+					hub.CaptureException(err)
+				}
 			})
 		}
 	}
@@ -60,7 +70,12 @@ func CaptureSimpleError(level sentry.Level, err error, args ...interface{}) {
 			for i, arg := range args {
 				scope.SetExtra(fmt.Sprintf("ARG-%v", i), arg)
 			}
-			sentry.CaptureException(err)
+
+			if ierr, ok := err.(IError); ok {
+				sentry.CaptureException(ierr.OriginalError())
+			} else {
+				sentry.CaptureException(err)
+			}
 		})
 	}
 }
@@ -76,7 +91,11 @@ func CaptureErrorEcho(ctx echo.Context, level sentry.Level, err error) {
 				IPAddress: ctx.RealIP(),
 			})
 
-			sentry.CaptureException(err)
+			if ierr, ok := err.(IError); ok {
+				sentry.CaptureException(ierr.OriginalError())
+			} else {
+				sentry.CaptureException(err)
+			}
 		})
 	}
 }

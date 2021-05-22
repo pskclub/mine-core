@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/go-errors/errors"
 	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
 	"github.com/pskclub/mine-core/consts"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type IHTTPContext interface {
@@ -19,6 +19,7 @@ type IHTTPContext interface {
 	BindWithValidate(ctx IValidateContext) IError
 	BindOnly(i interface{}) IError
 	GetPageOptions() *PageOptions
+	GetPageOptionsWithOptions(options *PageOptionsOptions) *PageOptions
 	GetUserAgent() *user_agent.UserAgent
 }
 
@@ -28,9 +29,14 @@ type HTTPContext struct {
 	logger ILogger
 }
 
+type PageOptionsOptions struct {
+	OrderByAllowed []string
+}
+
 func (c *HTTPContext) GetPageOptions() *PageOptions {
 	limit, _ := strconv.ParseInt(c.QueryParam("limit"), 10, 64)
 	page, _ := strconv.ParseInt(c.QueryParam("page"), 10, 64)
+
 	if limit <= 0 {
 		limit = consts.PageLimitDefault
 	}
@@ -44,10 +50,62 @@ func (c *HTTPContext) GetPageOptions() *PageOptions {
 	}
 
 	return &PageOptions{
-		Q:     c.QueryParam("q"),
-		Limit: limit,
-		Page:  page,
+		Q:       c.QueryParam("q"),
+		Limit:   limit,
+		Page:    page,
+		OrderBy: c.genOrderBy(c.QueryParam("order_by")),
 	}
+}
+
+func (c *HTTPContext) genOrderBy(s string) []string {
+	orderBy := make([]string, 0)
+	fields := strings.Split(s, ",")
+	for _, field := range fields {
+		spaceParameters := strings.Split(field, " ")
+		bracketParameters := strings.Split(field, "(")
+		if len(spaceParameters) == 1 && len(bracketParameters) == 1 && spaceParameters[0] != "" {
+			orderBy = append(orderBy, fmt.Sprintf("%s desc", spaceParameters[0]))
+		} else if len(spaceParameters) == 2 {
+			name := spaceParameters[0]
+			if name != "" {
+				shortingParameter := spaceParameters[1]
+				if shortingParameter == "asc" {
+					orderBy = append(orderBy, fmt.Sprintf("%s %s", name, shortingParameter))
+				} else {
+					orderBy = append(orderBy, fmt.Sprintf("%s desc", name))
+				}
+			}
+		} else if len(bracketParameters) == 2 {
+			name := strings.TrimSuffix(bracketParameters[1], ")")
+			if name != "" {
+				shortingParameter := bracketParameters[0]
+				if shortingParameter == "asc" {
+					orderBy = append(orderBy, fmt.Sprintf("%s %s", name, shortingParameter))
+				} else {
+					orderBy = append(orderBy, fmt.Sprintf("%s desc", name))
+				}
+			}
+		}
+	}
+	return orderBy
+}
+
+func (c *HTTPContext) GetPageOptionsWithOptions(options *PageOptionsOptions) *PageOptions {
+	pageOptions := c.GetPageOptions()
+	if options != nil {
+		newOrderBy := make([]string, 0)
+		for _, field := range pageOptions.OrderBy {
+			parameters := strings.Split(field, " ")
+			sortBy := parameters[0]
+			for _, name := range options.OrderByAllowed {
+				if sortBy == name {
+					newOrderBy = append(newOrderBy, field)
+				}
+			}
+		}
+		pageOptions.OrderBy = newOrderBy
+	}
+	return pageOptions
 }
 
 type HandlerFunc func(IHTTPContext) error
@@ -113,18 +171,6 @@ func (c *HTTPContext) BindOnly(i interface{}) IError {
 	}
 	c.Bind(i)
 	return nil
-}
-
-func (c *HTTPContext) NewError(err error, errorType IError, args ...interface{}) IError {
-	if err != nil {
-		errWrap := errors.Wrap(err, 1)
-		if errorType.GetStatus() >= 500 {
-			fmt.Println(errWrap.ErrorStack())
-			c.Log().Error(errWrap, args...)
-		}
-
-	}
-	return errorType
 }
 
 func (c *HTTPContext) Log() ILogger {

@@ -9,12 +9,14 @@ type IError interface {
 	Error() string
 	GetStatus() int
 	JSON() interface{}
+	OriginalError() error
 }
 
 type Error struct {
-	Status  int         `json:"-"`
-	Code    string      `json:"code"`
-	Message interface{} `json:"message"`
+	Status        int         `json:"-"`
+	Code          string      `json:"code"`
+	Message       interface{} `json:"message"`
+	originalError error
 }
 
 func (c Error) JSON() interface{} {
@@ -27,6 +29,14 @@ func (c Error) Error() string {
 
 func (c Error) GetStatus() int {
 	return c.Status
+}
+
+func (c Error) OriginalError() error {
+	if c.originalError == nil {
+		return c
+	}
+
+	return c.originalError
 }
 
 func Recover(textError string) {

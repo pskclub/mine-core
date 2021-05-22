@@ -123,7 +123,23 @@ func (c *coreContext) DBSMongo(name string) IMongoDB {
 
 func (c *coreContext) NewError(err error, errorType IError, args ...interface{}) IError {
 	if err != nil {
-		errWrap := errors.Wrap(err, 1)
+		if ierr, ok := err.(Error); ok {
+			errorType = Error{
+				Status:        errorType.(Error).Status,
+				Code:          errorType.(Error).Code,
+				Message:       errorType.(Error).Message,
+				originalError: ierr.originalError,
+			}
+		} else {
+			errorType = Error{
+				Status:        errorType.(Error).Status,
+				Code:          errorType.(Error).Code,
+				Message:       errorType.(Error).Message,
+				originalError: err,
+			}
+		}
+
+		errWrap := errors.Wrap(errorType.OriginalError(), 1)
 		if errorType.GetStatus() >= 500 {
 			stack := errWrap.ErrorStack()
 			fmt.Println(stack)
@@ -131,8 +147,8 @@ func (c *coreContext) NewError(err error, errorType IError, args ...interface{})
 		} else {
 			c.Log().Debug(errWrap.ErrorStack(), args)
 		}
-
 	}
+
 	return errorType
 }
 

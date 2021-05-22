@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 )
@@ -65,6 +66,10 @@ func (v *Valid) Error() string {
 	return strings.Join(v.err.Strings(), ", ")
 }
 
+func (v *Valid) OriginalError() error {
+	return errors.New(v.Error())
+}
+
 func (v *Valid) GetStatus() int {
 	return http.StatusBadRequest
 }
@@ -115,4 +120,8 @@ func (v *Valid) Must(x bool, msg *IValidMessage) bool {
 // Add adds errors
 func (v *Valid) Add(err ...error) {
 	v.err.errors = append(v.err.errors, err...)
+}
+
+func (v *Valid) OriginalErrorMessage() string {
+	return v.err.Error()
 }
