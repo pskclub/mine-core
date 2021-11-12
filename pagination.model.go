@@ -1,11 +1,10 @@
 package core
 
-import "reflect"
-
 type Pagination struct {
 	Page  int64       `json:"page"`
 	Total int64       `json:"total"`
-	Limit int64       `json:"limit,omitempty"`
+	Limit int64       `json:"limit"`
+	Count int64       `json:"count"`
 	Items interface{} `json:"items"`
 }
 
@@ -14,6 +13,12 @@ type PageOptions struct {
 	Limit   int64
 	Page    int64
 	OrderBy []string
+}
+
+func (p *PageOptions) SetOrderDefault(orders ...string) {
+	if len(p.OrderBy) == 0 {
+		p.OrderBy = orders
+	}
 }
 
 type PageResponse struct {
@@ -26,15 +31,12 @@ type PageResponse struct {
 }
 
 func NewPagination(items interface{}, options *PageResponse) *Pagination {
-	m := &Pagination{
-		Page:  1,
-		Total: int64(reflect.ValueOf(items).Len()),
-		Limit: int64(reflect.ValueOf(items).Len()),
-	}
+	m := &Pagination{}
 	if options != nil {
 		m.Limit = options.Limit
 		m.Page = options.Page
 		m.Total = options.Total
+		m.Count = options.Count
 	}
 
 	if items == nil {
