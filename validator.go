@@ -15,6 +15,10 @@ type FieldError struct {
 	Fields  interface{} `json:"fields,omitempty"`
 }
 
+func (f FieldError) GetCode() string {
+	return f.Code
+}
+
 func (FieldError) GetStatus() int {
 	return http.StatusBadRequest
 }
@@ -35,8 +39,8 @@ func (f FieldError) JSON() interface{} {
 	return f
 }
 
-func (f FieldError) GetCode() string {
-	return f.Code
+func (f FieldError) GetMessage() interface{} {
+	return f.Message
 }
 
 type jsonErr struct {

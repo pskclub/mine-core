@@ -29,6 +29,14 @@ var StringM = func(field string) *IValidMessage {
 	}
 }
 
+var BooleanM = func(field string) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_TYPE",
+		Message: "The " + field + " field must be boolean",
+	}
+}
+
 var NumberM = func(field string) *IValidMessage {
 	return &IValidMessage{
 		Name:    field,
@@ -126,6 +134,14 @@ var JSONObjectM = func(field string) *IValidMessage {
 		Name:    field,
 		Code:    "INVALID_JSON",
 		Message: "The " + field + " field must be json object",
+	}
+}
+
+var JSONObjectEmptyM = func(field string) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_JSON",
+		Message: "The " + field + " field cannot be empty object",
 	}
 }
 
@@ -256,7 +272,7 @@ var StrMinM = func(field string, min int) *IValidMessage {
 	return &IValidMessage{
 		Name:    field,
 		Code:    "INVALID_STRING_SIZE_MIN",
-		Message: fmt.Sprintf("The %v field must not be least than %v character(s)", field, min),
+		Message: fmt.Sprintf("The %v field must not be shorter than %v character(s)", field, min),
 		Data:    min,
 	}
 }
@@ -273,6 +289,14 @@ var EmailM = func(field string) *IValidMessage {
 	return &IValidMessage{
 		Name:    field,
 		Code:    "INVALID_EMAIL",
-		Message: fmt.Sprintf("The %v field must be email", field),
+		Message: fmt.Sprintf("The %v field must be Email Address", field),
+	}
+}
+
+var ObjectEmptyM = func(field string) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_TYPE",
+		Message: "The " + field + " field cannot be empty object",
 	}
 }

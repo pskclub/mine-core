@@ -7,16 +7,19 @@ import (
 
 type IError interface {
 	Error() string
-	GetStatus() int
 	GetCode() string
+	GetStatus() int
 	JSON() interface{}
 	OriginalError() error
+	GetMessage() interface{}
 }
 
 type Error struct {
 	Status        int         `json:"-"`
 	Code          string      `json:"code"`
 	Message       interface{} `json:"message"`
+	Data          interface{} `json:"-"`
+	Fields        interface{} `json:"fields,omitempty"`
 	originalError error
 }
 
@@ -28,12 +31,12 @@ func (c Error) Error() string {
 	return fmt.Sprintf("code : %v message : %v", c.Code, c.Message)
 }
 
-func (c Error) GetStatus() int {
-	return c.Status
-}
-
 func (c Error) GetCode() string {
 	return c.Code
+}
+
+func (c Error) GetStatus() int {
+	return c.Status
 }
 
 func (c Error) OriginalError() error {
@@ -42,6 +45,10 @@ func (c Error) OriginalError() error {
 	}
 
 	return c.originalError
+}
+
+func (c Error) GetMessage() interface{} {
+	return c.Message
 }
 
 func Recover(textError string) {

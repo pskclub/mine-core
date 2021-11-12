@@ -20,7 +20,8 @@ type IContext interface {
 	Requester() IRequester
 	Cache() ICache
 	Caches(name string) ICache
-	ELS() IELS
+	GetData(name string) interface{}
+	SetData(name string, data interface{})
 }
 
 type ContextOptions struct {
@@ -32,8 +33,8 @@ type ContextOptions struct {
 	Caches      map[string]ICache
 	ENV         IENV
 	MQ          IMQ
-	ELS         IELS
 	contextType consts.ContextType
+	DATA        map[string]interface{}
 }
 
 func NewContext(options *ContextOptions) IContext {
@@ -47,7 +48,7 @@ func NewContext(options *ContextOptions) IContext {
 		cache:          options.Cache,
 		caches:         options.Caches,
 		mq:             options.MQ,
-		els:            options.ELS,
+		data:           options.DATA,
 	}
 }
 
@@ -60,17 +61,21 @@ type coreContext struct {
 	databaseMongo  IMongoDB
 	databasesMongo map[string]IMongoDB
 	mq             IMQ
-	els            IELS
 	env            IENV
 	logger         ILogger
+	data           map[string]interface{}
+}
+
+func (c *coreContext) GetData(name string) interface{} {
+	return c.data[name]
+}
+
+func (c *coreContext) SetData(name string, data interface{}) {
+	c.data[name] = data
 }
 
 func (c *coreContext) Cache() ICache {
 	return c.cache
-}
-
-func (c *coreContext) ELS() IELS {
-	return c.els
 }
 
 func (c *coreContext) MQ() IMQ {
@@ -136,13 +141,14 @@ func (c *coreContext) NewError(err error, errorType IError, args ...interface{})
 				Status:        errorType.(Error).Status,
 				Code:          errorType.(Error).Code,
 				Message:       errorType.(Error).Message,
+				Fields:        errorType.(Error).Fields,
 				originalError: ierr.originalError,
 			}
 		} else {
 			errorType = Error{
-				Status:        errorType.(Error).Status,
-				Code:          errorType.(Error).Code,
-				Message:       errorType.(Error).Message,
+				Status:        errorType.GetStatus(),
+				Code:          errorType.GetCode(),
+				Message:       errorType.GetMessage(),
 				originalError: err,
 			}
 		}

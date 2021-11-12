@@ -383,11 +383,25 @@ func (b *BaseValidator) IsJSONRequired(field *json.RawMessage, fieldPath string)
 
 func (b *BaseValidator) IsJSONObject(field *json.RawMessage, fieldPath string) (bool, *IValidMessage) {
 	if field == nil {
-		return true, JSONArrayM(fieldPath)
+		return true, JSONM(fieldPath)
 	}
 
 	var js map[string]interface{}
 	return json.Unmarshal(*field, &js) == nil, JSONM(fieldPath)
+}
+
+func (b *BaseValidator) IsJSONObjectNotEmpty(field *json.RawMessage, fieldPath string) (bool, *IValidMessage) {
+	if field == nil {
+		return true, JSONObjectEmptyM(fieldPath)
+	}
+
+	var js map[string]interface{}
+	err := json.Unmarshal(*field, &js)
+	if err != nil {
+		return false, JSONObjectEmptyM(fieldPath)
+	}
+
+	return len(js) != 0, JSONObjectEmptyM(fieldPath)
 }
 
 func (b *BaseValidator) IsJSONArray(field *json.RawMessage, fieldPath string) (bool, *IValidMessage) {
@@ -472,6 +486,23 @@ func (b *BaseValidator) IsJSONStrPathRequired(json *json.RawMessage, path string
 	return true, RequiredM(fieldPath)
 }
 
+func (b *BaseValidator) IsJSONBoolPathRequired(json *json.RawMessage, path string, fieldPath string) (bool, *IValidMessage) {
+	if json == nil {
+		return false, RequiredM(fieldPath)
+	}
+
+	val := gojsonq.New().FromString(string(*json)).Find(path)
+	if val == nil {
+		return false, RequiredM(fieldPath)
+	}
+	_, ok := val.(bool)
+	if !ok {
+		return false, BooleanM(fieldPath)
+	}
+
+	return true, RequiredM(fieldPath)
+}
+
 func (b *BaseValidator) IsJSONPathRequired(j *json.RawMessage, path string, fieldPath string) (bool, *IValidMessage) {
 	if j == nil {
 		return false, RequiredM(fieldPath)
@@ -488,6 +519,30 @@ func (b *BaseValidator) IsJSONPathRequired(j *json.RawMessage, path string, fiel
 	}
 
 	return true, RequiredM(fieldPath)
+}
+
+func (b *BaseValidator) IsJSONPathRequireNotEmpty(j *json.RawMessage, path string, fieldPath string) (bool, *IValidMessage) {
+	if j == nil {
+		return false, RequiredM(fieldPath)
+	}
+
+	val := gojsonq.New().FromString(string(*j)).Find(path)
+	if val == nil {
+		return false, RequiredM(fieldPath)
+	}
+
+	value, err := json.Marshal(val)
+	if err != nil {
+		return false, RequiredM(fieldPath)
+	}
+
+	var js map[string]interface{}
+	err = json.Unmarshal(value, &js)
+	if err != nil {
+		return false, JSONObjectM(fieldPath)
+	}
+
+	return len(js) != 0, JSONObjectEmptyM(fieldPath)
 }
 
 func (b *BaseValidator) IsDateTime(input *string, fieldPath string) (bool, *IValidMessage) {
@@ -760,14 +815,51 @@ func (b *BaseValidator) IsEmail(field *string, fieldPath string) (bool, *IValidM
 	if field == nil {
 		return true, nil
 	}
-
 	if *field == "" {
 		return true, nil
 	}
-
 	if !govalidator.IsEmail(*field) {
 		return false, EmailM(fieldPath)
 	}
-
 	return true, nil
+}
+
+func (b *BaseValidator) IsJSONPathStrIn(json *json.RawMessage, path string, rules string, fieldPath string) (bool, *IValidMessage) {
+	if json == nil {
+		return true, nil
+	}
+
+	val := gojsonq.New().FromString(string(*json)).Find(path)
+	if val == nil {
+		return true, nil
+	}
+	input, ok := val.(string)
+	if !ok {
+		return false, StringM(fieldPath)
+	}
+	if val == "" || !ok {
+		return false, RequiredM(fieldPath)
+	}
+
+	split := strings.Split(rules, "|")
+
+	return govalidator.IsIn(input, split...), InM(fieldPath, rules)
+}
+
+func (b *BaseValidator) IsNotEmptyObjectRequired(value interface{}, fieldPath string) (bool, *IValidMessage) {
+	if value == nil {
+		return false, ObjectEmptyM(fieldPath)
+	}
+
+	object, ok := value.(map[string]interface{})
+	return len(object) != 0 && ok, ObjectEmptyM(fieldPath)
+}
+
+func (b *BaseValidator) IsBoolRequired(value interface{}, fieldPath string) (bool, *IValidMessage) {
+	if value == nil {
+		return false, BooleanM(fieldPath)
+	}
+
+	_, ok := value.(*bool)
+	return ok, BooleanM(fieldPath)
 }

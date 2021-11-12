@@ -7,22 +7,25 @@ import (
 	"errors"
 	"github.com/gojektech/heimdall/v6/httpclient"
 	"github.com/gojektech/heimdall/v6/plugins"
-	"github.com/sirupsen/logrus"
 	"github.com/pskclub/mine-core/utils"
+	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	xurl "net/url"
+	"os"
 	"strings"
 	"time"
 )
 
 type RequesterOptions struct {
-	BaseURL    string
-	Timeout    *time.Duration
-	Headers    http.Header
-	Params     xurl.Values
-	RetryCount int
+	BaseURL         string
+	Timeout         *time.Duration
+	Headers         http.Header
+	Params          xurl.Values
+	RetryCount      int
+	IsMultipartForm bool
 }
 
 type RequestResponse struct {
@@ -50,6 +53,45 @@ type IRequester interface {
 type Requester struct {
 	client *httpclient.Client
 	ctx    IContext
+}
+
+type IFile interface {
+	Name() string
+	Value() []byte
+}
+
+type File struct {
+	name  string
+	value []byte
+}
+
+// Deprecated: RequestWrapper is deprecated, use RequestToStruct or RequestToStructPagination instead.
+func RequestWrapper(dest interface{}, requester func() (*RequestResponse, error)) (*RequestResponse, error) {
+	res, err := requester()
+
+	if err != nil {
+		return nil, err
+	}
+	err = utils.MapToStruct(res.Data, dest)
+	if err != nil {
+		return nil, err
+	}
+	return res, err
+}
+
+func NewFile(name string, value []byte) IFile {
+	return &File{
+		name:  name,
+		value: value,
+	}
+}
+
+func (f File) Name() string {
+	return f.name
+}
+
+func (f File) Value() []byte {
+	return f.value
 }
 
 func NewRequester(ctx IContext) IRequester {
@@ -104,8 +146,23 @@ func (r Requester) Delete(url string, options *RequesterOptions) (*RequestRespon
 
 func (r Requester) Post(url string, body interface{}, options *RequesterOptions) (*RequestResponse, error) {
 	url, headers := r.getOptions(url, options)
-	res, err := r.client.Post(url, r.getJSONBody(body), headers)
-	return r.transformResponse(res, err)
+
+	if !options.IsMultipartForm {
+		res, err := r.client.Post(url, r.getJSONBody(body), headers)
+		return r.transformResponse(res, err)
+
+	} else {
+		newBody, contentType, err := r.getMultipartBody(body)
+		if err != nil {
+			return nil, err
+		}
+
+		headers.Add("Content-Type", contentType)
+
+		res, err := r.client.Post(url, newBody, headers)
+		return r.transformResponse(res, err)
+	}
+
 }
 
 func (r Requester) Put(url string, body interface{}, options *RequesterOptions) (*RequestResponse, error) {
@@ -130,7 +187,7 @@ func (r Requester) transformResponse(res *http.Response, err error) (*RequestRes
 	if res == nil {
 		return &RequestResponse{
 			Data: data,
-		}, errors.New("Something went wrong")
+		}, errors.New("Something went wrong ")
 	}
 
 	result := &RequestResponse{
@@ -191,14 +248,177 @@ func (r Requester) getJSONBody(body interface{}) io.Reader {
 	return bytes.NewReader(newBody)
 }
 
+func (r Requester) getMultipartBody(body interface{}) (*bytes.Buffer, string, error) {
+	if newBody, ok := body.(map[string]interface{}); ok {
+		var b bytes.Buffer
+		var err error
+
+		w := multipart.NewWriter(&b)
+
+		for key, value := range newBody {
+			var fw io.Writer
+
+			if x, ok := value.(io.Closer); ok {
+				defer x.Close()
+			}
+
+			if f, ok := value.(IFile); ok {
+
+				fw, err = w.CreateFormFile(key, f.Name())
+				if err != nil {
+					return nil, "", err
+				}
+
+				_, err = fw.Write(f.Value())
+				if err != nil {
+					return nil, "", err
+				}
+
+			} else if f, ok := value.(*os.File); ok {
+				if fw, err = w.CreateFormFile(key, f.Name()); err != nil {
+					return nil, "", err
+				}
+
+				if _, err = io.Copy(fw, f); err != nil {
+					return nil, "", err
+				}
+
+			} else if s, ok := value.(string); ok {
+				if fw, err = w.CreateFormField(key); err != nil {
+					return nil, "", err
+				}
+
+				_, err = fw.Write(utils.StringToBytes(s))
+				if err != nil {
+					return nil, "", err
+				}
+
+			} else {
+				return nil, "", errors.New("A multipart/form-data value can either be IFile, *os.File, string ")
+			}
+		}
+
+		if err = w.Close(); err != nil {
+			return nil, "", err
+		}
+
+		return &b, w.FormDataContentType(), nil
+
+	} else {
+
+		return nil, "", errors.New("Requested body cannot be transform to multipart/form-data ")
+
+	}
+}
+
 func (r Requester) getOptions(_url string, opts *RequesterOptions) (url string, headers http.Header) {
 	headers = make(http.Header)
 	url = _url
+
 	if opts != nil {
 		r.client = newRequesterWithOptions(r.ctx, opts).client
 		url = r.getURL(_url, opts)
-		headers = opts.Headers
+		if opts.Headers != nil {
+			headers = opts.Headers
+		}
 	}
 
 	return url, headers
+}
+
+func RequesterToStruct(desc interface{}, requester func() (*RequestResponse, error)) IError {
+	res, err := requester()
+	if res == nil {
+		return Error{
+			Status:  http.StatusInternalServerError,
+			Code:    "NETWORK_ERROR",
+			Message: err.Error(),
+		}
+	}
+
+	if res.ErrorCode != "" {
+		ierr := Error{}
+		_ = utils.MapToStruct(res.Data, &ierr)
+		ierr.Status = res.StatusCode
+		return ierr
+	}
+
+	if err != nil {
+		return Error{
+			Status:  http.StatusInternalServerError,
+			Code:    "NETWORK_ERROR",
+			Message: err.Error(),
+		}
+	}
+	if err = json.Unmarshal(res.RawData, desc); err != nil {
+		return Error{
+			Status:  http.StatusInternalServerError,
+			Code:    "INTERNAL_SERVER_ERROR",
+			Message: err.Error(),
+		}
+	}
+
+	return nil
+}
+
+func RequesterToStructPagination(items interface{}, options *PageOptions, requester func() (*RequestResponse, error)) (*PageResponse, IError) {
+	res, err := requester()
+	if res == nil {
+		return nil, Error{
+			Status:  http.StatusInternalServerError,
+			Code:    "NETWORK_ERROR",
+			Message: err.Error(),
+		}
+	}
+
+	if res.ErrorCode != "" {
+		ierr := Error{}
+		_ = utils.MapToStruct(res.Data, &ierr)
+		ierr.Status = res.StatusCode
+		return nil, ierr
+	}
+
+	if err != nil {
+		return nil, Error{
+			Status:  http.StatusInternalServerError,
+			Code:    "NETWORK_ERROR",
+			Message: err.Error(),
+		}
+	}
+
+	itemByte, err := json.Marshal(res.Data["items"])
+	if err != nil {
+		return nil, Error{
+			Status:  http.StatusInternalServerError,
+			Code:    "INTERNAL_SERVER_ERROR",
+			Message: err.Error(),
+		}
+	}
+
+	if err = json.Unmarshal(itemByte, &items); err != nil {
+		return nil, Error{
+			Status:  http.StatusInternalServerError,
+			Code:    "INTERNAL_SERVER_ERROR",
+			Message: err.Error(),
+		}
+	}
+
+	pageResponse := &PageResponse{
+		Q:       options.Q,
+		OrderBy: options.OrderBy,
+	}
+
+	if length, ok := items.([]interface{}); ok {
+		pageResponse.Count = int64(len(length))
+	}
+
+	if err = json.Unmarshal(res.RawData, pageResponse); err != nil {
+		return nil, Error{
+			Status:  http.StatusInternalServerError,
+			Code:    "INTERNAL_SERVER_ERROR",
+			Message: err.Error(),
+		}
+	}
+
+	return pageResponse, nil
 }
