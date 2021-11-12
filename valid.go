@@ -70,12 +70,12 @@ func (v *Valid) OriginalError() error {
 	return errors.New(v.Error())
 }
 
-func (v *Valid) GetStatus() int {
-	return http.StatusBadRequest
+func (v *Valid) GetCode() string {
+	return "BAD_REQUEST"
 }
 
-func (v *Valid) GetCode() string {
-	return "INVALID_PARAMS"
+func (v *Valid) GetStatus() int {
+	return http.StatusBadRequest
 }
 
 func (v *Valid) JSON() interface{} {
@@ -88,6 +88,10 @@ func (v *Valid) JSON() interface{} {
 		}
 	}
 	return NewValidatorFields(fields)
+}
+
+func (v *Valid) GetMessage() interface{} {
+	return v.err.Error()
 }
 
 // Valid returns true if no error

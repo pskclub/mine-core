@@ -1,8 +1,10 @@
 package errmsgs
 
 import (
+	"fmt"
 	"github.com/pskclub/mine-core"
 	"net/http"
+	"strings"
 )
 
 func IsNotFoundError(err core.IError) bool {
@@ -32,11 +34,6 @@ var (
 		Code:    "CACHE_ERROR",
 		Message: "cache internal error"}
 
-	ELSError = core.Error{
-		Status:  http.StatusInternalServerError,
-		Code:    "ELS_ERROR",
-		Message: "elasticsearch internal error"}
-
 	InternalServerError = core.Error{
 		Status:  http.StatusInternalServerError,
 		Code:    "INTERNAL_SERVER_ERROR",
@@ -52,8 +49,20 @@ var (
 		Code:    "BAD_REQUEST",
 		Message: "bad request"}
 
+	SignatureInValid = core.Error{
+		Status:  http.StatusBadRequest,
+		Code:    "INVALID_SIGNATURE",
+		Message: "Signature is not valid"}
+
 	JSONInValid = core.Error{
 		Status:  http.StatusBadRequest,
 		Code:    "INVALID_JSON",
 		Message: "Must be json format"}
 )
+
+func NotFoundCustomError(key string) core.Error {
+	return core.Error{
+		Status:  http.StatusNotFound,
+		Code:    fmt.Sprintf("%s_NOT_FOUND", strings.ToUpper(key)),
+		Message: fmt.Sprintf("%s is not found", strings.ToLower(key))}
+}

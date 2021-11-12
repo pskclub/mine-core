@@ -6,6 +6,7 @@ import (
 	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/pskclub/mine-core/middlewares"
 	"github.com/sirupsen/logrus"
 	"time"
 )
@@ -37,7 +38,7 @@ func NewHTTPServer(options *HTTPContextOptions) *echo.Echo {
 
 	e.Use(Core(options))
 	e.Use(middleware.CORS())
-
+	e.Use(middlewares.HTTPRequestID())
 	e.Use(CreateLoggerMiddleware)
 	e.Use(RecoverWithConfig(options.ContextOptions.ENV, middleware.RecoverConfig{
 		StackSize: 1 << 20, // 1 KB

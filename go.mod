@@ -24,8 +24,10 @@ require (
 	github.com/thedevsaddam/gojsonq/v2 v2.5.2
 	github.com/tidwall/gjson v1.6.8
 	go.mongodb.org/mongo-driver v1.5.2
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	gopkg.in/asaskevich/govalidator.v9 v9.0.0-20180315120708-ccb8e960c48f
 	gorm.io/driver/mysql v1.0.3
-	gorm.io/gorm v1.21.9
+	gorm.io/driver/postgres v1.2.2 // indirect
+	gorm.io/driver/sqlserver v1.2.1 // indirect
+	gorm.io/gorm v1.22.2
 )
