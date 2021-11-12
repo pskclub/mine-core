@@ -8,7 +8,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/elastic/go-elasticsearch/v7 v7.15.1
 	github.com/getsentry/sentry-go v0.11.0
-	github.com/go-errors/errors v1.4.0
+	github.com/go-errors/errors v1.4.1
 	github.com/go-redis/redis/v8 v8.4.0
 	github.com/gojektech/heimdall/v6 v6.1.0
 	github.com/jinzhu/copier v0.3.2
