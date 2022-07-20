@@ -6,3 +6,6 @@ tags:
 
 install:
 	go get
+
+version:
+	go version
