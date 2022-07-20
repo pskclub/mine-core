@@ -48,6 +48,7 @@ type Database struct {
 	User     string
 	Password string
 	Port     string
+	config   *gorm.Config
 }
 
 func NewDatabase(env *ENVConfig) *Database {
@@ -58,6 +59,19 @@ func NewDatabase(env *ENVConfig) *Database {
 		User:     env.DBUser,
 		Password: env.DBPassword,
 		Port:     env.DBPort,
+		config:   &gorm.Config{},
+	}
+}
+
+func NewDatabaseWithConfig(env *ENVConfig, config *gorm.Config) *Database {
+	return &Database{
+		Driver:   env.DBDriver,
+		Name:     env.DBName,
+		Host:     env.DBHost,
+		User:     env.DBUser,
+		Password: env.DBPassword,
+		Port:     env.DBPort,
+		config:   config,
 	}
 }
 
@@ -76,27 +90,23 @@ func (db *Database) Connect() (*gorm.DB, error) {
 	var newDB *gorm.DB
 	var err error
 
+	db.config.Logger = logger.Default.LogMode(logLevel)
+
 	switch db.Driver {
 	case DatabaseDriverMSSQL:
 		dsn = fmt.Sprintf("sqlserver://%v:%v@%v:%v?database=%v",
 			db.User, db.Password, db.Host, db.Port, db.Name,
 		)
-		newDB, err = gorm.Open(sqlserver.Open(dsn), &gorm.Config{
-			Logger: logger.Default.LogMode(logLevel),
-		})
+		newDB, err = gorm.Open(sqlserver.Open(dsn), db.config)
 	case DatabaseDriverPOSTGRES:
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=utc",
 			db.Host, db.User, db.Password, db.Name, db.Port)
-		newDB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-			Logger: logger.Default.LogMode(logLevel),
-		})
+		newDB, err = gorm.Open(postgres.Open(dsn), db.config)
 	default:
 		dsn = fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?charset=utf8&parseTime=True&loc=Local&multiStatements=True&loc=UTC",
 			db.User, db.Password, db.Host, db.Port, db.Name,
 		)
-		newDB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
-			Logger: logger.Default.LogMode(logLevel),
-		})
+		newDB, err = gorm.Open(mysql.Open(dsn), db.config)
 	}
 
 	if err != nil {
