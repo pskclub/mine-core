@@ -14,6 +14,14 @@ func CaptureError(ctx IContext, level sentry.Level, err error, args ...interface
 			scope.SetRequest(nil)
 			scope.SetContext("env", ctx.ENV().All())
 			scope.SetLevel(level)
+			breadcrumbs, ok := ctx.GetData("breadcrumb").([]sentry.Breadcrumb)
+			if !ok {
+				breadcrumbs = make([]sentry.Breadcrumb, 0)
+			}
+
+			for _, breadcrumb := range breadcrumbs {
+				scope.AddBreadcrumb(&breadcrumb, 30)
+			}
 
 			for i, arg := range args {
 				scope.SetExtra(fmt.Sprintf("ARG-%v", i), arg)
@@ -32,6 +40,15 @@ func CaptureHTTPError(ctx IHTTPContext, level sentry.Level, err error, args ...i
 	if true {
 		if hub := sentryecho.GetHubFromContext(ctx); hub != nil {
 			hub.WithScope(func(scope *sentry.Scope) {
+				breadcrumbs, ok := ctx.GetData("breadcrumb").([]sentry.Breadcrumb)
+				if !ok {
+					breadcrumbs = make([]sentry.Breadcrumb, 0)
+				}
+
+				for _, breadcrumb := range breadcrumbs {
+					scope.AddBreadcrumb(&breadcrumb, 30)
+				}
+
 				scope.SetRequest(ctx.Request())
 				scope.SetContext("env", ctx.ENV().All())
 				scope.SetLevel(level)
