@@ -1,10 +1,10 @@
 package core
 
 type Pagination struct {
-	Page  int64       `json:"page"`
-	Total int64       `json:"total"`
-	Limit int64       `json:"limit"`
-	Count int64       `json:"count"`
+	Page  int64       `json:"page" example:"1"`
+	Total int64       `json:"total" example:"45"`
+	Limit int64       `json:"limit" example:"30"`
+	Count int64       `json:"count" example:"30"`
 	Items interface{} `json:"items"`
 }
 

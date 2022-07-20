@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/pskclub/mine-core/consts"
+	"gitlab.finema.co/finema/idin-core/consts"
 	"net/http"
 )
 

@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 	"github.com/go-errors/errors"
-	"github.com/pskclub/mine-core/consts"
+	"gitlab.finema.co/finema/idin-core/consts"
 	"gorm.io/gorm"
 )
 
@@ -20,8 +20,6 @@ type IContext interface {
 	Requester() IRequester
 	Cache() ICache
 	Caches(name string) ICache
-	ELS() IELS
-	ELSS(name string) IELS
 	GetData(name string) interface{}
 	SetData(name string, data interface{})
 }
@@ -36,8 +34,6 @@ type ContextOptions struct {
 	ENV         IENV
 	MQ          IMQ
 	contextType consts.ContextType
-	ELS         IELS
-	ELSS        map[string]IELS
 	DATA        map[string]interface{}
 }
 
@@ -53,8 +49,6 @@ func NewContext(options *ContextOptions) IContext {
 		caches:         options.Caches,
 		mq:             options.MQ,
 		data:           options.DATA,
-		els:            options.ELS,
-		elss:           options.ELSS,
 	}
 }
 
@@ -69,13 +63,7 @@ type coreContext struct {
 	mq             IMQ
 	env            IENV
 	logger         ILogger
-	els            IELS
-	elss           map[string]IELS
 	data           map[string]interface{}
-}
-
-func (c *coreContext) ELS() IELS {
-	return c.els
 }
 
 func (c *coreContext) GetData(name string) interface{} {
@@ -132,13 +120,6 @@ func (c *coreContext) DBS(name string) *gorm.DB {
 		return nil
 	}
 	return db
-}
-func (c *coreContext) ELSS(name string) IELS {
-	els, ok := c.elss[name]
-	if !ok {
-		return nil
-	}
-	return els
 }
 
 func (c *coreContext) DBMongo() IMongoDB {

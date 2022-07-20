@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 	"github.com/go-errors/errors"
-	"github.com/pskclub/mine-core/consts"
+	"gitlab.finema.co/finema/idin-core/consts"
 )
 
 type IMQContext interface {
@@ -36,6 +36,8 @@ func (c *MQContext) NewError(err error, errorType IError, args ...interface{}) I
 		if errorType.GetStatus() >= 500 {
 			fmt.Println(errWrap.ErrorStack())
 			c.Log().Error(errWrap, args...)
+		} else {
+			c.Log().Debug(errWrap.ErrorStack(), args)
 		}
 
 	}

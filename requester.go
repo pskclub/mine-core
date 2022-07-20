@@ -5,16 +5,17 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"github.com/gojek/heimdall/v7/httpclient"
-	"github.com/gojek/heimdall/v7/plugins"
-	"github.com/pskclub/mine-core/utils"
+	"github.com/gojektech/heimdall/v6/httpclient"
+	"github.com/gojektech/heimdall/v6/plugins"
 	"github.com/sirupsen/logrus"
+	"gitlab.finema.co/finema/idin-core/utils"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	xurl "net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -26,6 +27,8 @@ type RequesterOptions struct {
 	Params          xurl.Values
 	RetryCount      int
 	IsMultipartForm bool
+	IsURLEncode     bool
+	IsBodyRawByte   bool
 }
 
 type RequestResponse struct {
@@ -46,6 +49,7 @@ type IRequester interface {
 	Get(url string, options *RequesterOptions) (*RequestResponse, error)
 	Delete(url string, options *RequesterOptions) (*RequestResponse, error)
 	Post(url string, body interface{}, options *RequesterOptions) (*RequestResponse, error)
+	Create(method RequesterMethodType, url string, body interface{}, options *RequesterOptions) (*RequestResponse, error)
 	Put(url string, body interface{}, options *RequesterOptions) (*RequestResponse, error)
 	Patch(url string, body interface{}, options *RequesterOptions) (*RequestResponse, error)
 }
@@ -147,11 +151,7 @@ func (r Requester) Delete(url string, options *RequesterOptions) (*RequestRespon
 func (r Requester) Post(url string, body interface{}, options *RequesterOptions) (*RequestResponse, error) {
 	url, headers := r.getOptions(url, options)
 
-	if !options.IsMultipartForm {
-		res, err := r.client.Post(url, r.getJSONBody(body), headers)
-		return r.transformResponse(res, err)
-
-	} else {
+	if options.IsMultipartForm {
 		newBody, contentType, err := r.getMultipartBody(body)
 		if err != nil {
 			return nil, err
@@ -161,19 +161,48 @@ func (r Requester) Post(url string, body interface{}, options *RequesterOptions)
 
 		res, err := r.client.Post(url, newBody, headers)
 		return r.transformResponse(res, err)
+
+	} else if options.IsURLEncode {
+		newBody, length, err := r.getURLEncodedBody(body)
+		if err != nil {
+			return nil, err
+		}
+
+		headers.Add("Content-Type", "application/x-www-form-urlencoded")
+		headers.Add("Content-Length", length)
+
+		res, err := r.client.Post(url, newBody, headers)
+		return r.transformResponse(res, err)
+	} else {
+		res, err := r.client.Post(url, r.getJSONBody(body, options), headers)
+		return r.transformResponse(res, err)
+
+	}
+}
+
+func (r Requester) Create(method RequesterMethodType, url string, body interface{}, options *RequesterOptions) (*RequestResponse, error) {
+	url, headers := r.getOptions(url, options)
+	var newBody io.Reader
+
+	if body != nil {
+		newBody = r.getJSONBody(body, options)
 	}
 
+	req, err := http.NewRequest(string(method), url, newBody)
+	req.Header = headers
+	res, err := r.client.Do(req)
+	return r.transformResponse(res, err)
 }
 
 func (r Requester) Put(url string, body interface{}, options *RequesterOptions) (*RequestResponse, error) {
 	url, headers := r.getOptions(url, options)
-	res, err := r.client.Put(url, r.getJSONBody(body), headers)
+	res, err := r.client.Put(url, r.getJSONBody(body, options), headers)
 	return r.transformResponse(res, err)
 }
 
 func (r Requester) Patch(url string, body interface{}, options *RequesterOptions) (*RequestResponse, error) {
 	url, headers := r.getOptions(url, options)
-	res, err := r.client.Patch(url, r.getJSONBody(body), headers)
+	res, err := r.client.Patch(url, r.getJSONBody(body, options), headers)
 	return r.transformResponse(res, err)
 }
 
@@ -243,7 +272,12 @@ func (r Requester) getURL(url string, opts *RequesterOptions) string {
 	return url
 }
 
-func (r Requester) getJSONBody(body interface{}) io.Reader {
+func (r Requester) getJSONBody(body interface{}, options *RequesterOptions) io.Reader {
+	if options != nil && options.IsBodyRawByte {
+		if f, ok := body.([]byte); ok {
+			return bytes.NewReader(f)
+		}
+	}
 	newBody, _ := json.Marshal(body)
 	return bytes.NewReader(newBody)
 }
@@ -308,6 +342,20 @@ func (r Requester) getMultipartBody(body interface{}) (*bytes.Buffer, string, er
 
 		return nil, "", errors.New("Requested body cannot be transform to multipart/form-data ")
 
+	}
+}
+
+func (r Requester) getURLEncodedBody(body interface{}) (*strings.Reader, string, error) {
+	if newBody, ok := body.(map[string]interface{}); ok {
+		data := xurl.Values{}
+		for key, element := range newBody {
+			data.Set(key, element.(string))
+		}
+
+		return strings.NewReader(data.Encode()), strconv.Itoa(len(data.Encode())), nil
+
+	} else {
+		return nil, "", errors.New("Requested body cannot be transform to x-www-form-urlencoded")
 	}
 }
 

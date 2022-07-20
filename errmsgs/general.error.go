@@ -2,7 +2,7 @@ package errmsgs
 
 import (
 	"fmt"
-	"github.com/pskclub/mine-core"
+	"gitlab.finema.co/finema/idin-core"
 	"net/http"
 	"strings"
 )

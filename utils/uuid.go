@@ -1,16 +1,9 @@
 package utils
 
-import (
-	uuid "github.com/satori/go.uuid"
-	"github.com/teris-io/shortid"
-)
+import uuid "github.com/satori/go.uuid"
 
 func GetUUID() string {
 	return uuid.NewV4().String()
-}
-
-func GetShortID() string {
-	return shortid.MustGenerate()
 }
 
 func ToUUID(str string) (uuid.UUID, error) {

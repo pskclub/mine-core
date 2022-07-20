@@ -1,8 +1,6 @@
 package core
 
 import (
-	"github.com/getsentry/sentry-go"
-	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
@@ -10,15 +8,15 @@ import (
 )
 
 // Log is the logger utility with information of request context
-type HTTPLogger struct {
+type E2ELogger struct {
 	log    *logrus.Logger
 	simple bool
 	Type   string
-	ctx    IHTTPContext
+	ctx    IE2EContext
 }
 
 // NewLogger will create the logger with context from echo context
-func NewHTTPLogger(ctx IHTTPContext) ILogger {
+func NewE2ELogger(ctx IE2EContext) ILogger {
 	logger := logrus.New()
 	logger.SetLevel(ctx.ENV().Config().LogLevel)
 	formatter := new(logrus.JSONFormatter)
@@ -28,7 +26,7 @@ func NewHTTPLogger(ctx IHTTPContext) ILogger {
 	multi := io.MultiWriter(os.Stderr)
 	logger.Out = multi
 
-	return &HTTPLogger{
+	return &E2ELogger{
 		log:    logger,
 		simple: false,
 		Type:   ctx.Type(),
@@ -37,21 +35,16 @@ func NewHTTPLogger(ctx IHTTPContext) ILogger {
 
 }
 
-func (logger *HTTPLogger) getLogFields(fn string, line int) logrus.Fields {
+func (logger *E2ELogger) getLogFields(fn string, line int) logrus.Fields {
 	return logrus.Fields{
-		"type":        logger.Type,
-		"function":    fn,
-		"line":        line,
-		"request_id":  logger.ctx.Get(echo.HeaderXRequestID),
-		"source_ip":   logger.ctx.RealIP(),
-		"http_method": logger.ctx.Request().Method,
-		"endpoint":    logger.ctx.Request().URL.RequestURI(),
+		"type":     logger.Type,
+		"function": fn,
+		"line":     line,
 	}
 }
 
 // Info log information level
-func (logger *HTTPLogger) Info(args ...interface{}) {
-	//CaptureHTTPError(logger.ctx, sentry.LevelInfo, message, args...)
+func (logger *E2ELogger) Info(args ...interface{}) {
 	_, fn, line, _ := runtime.Caller(1)
 	if logger.simple {
 		logger.log.Info(args...)
@@ -61,8 +54,7 @@ func (logger *HTTPLogger) Info(args ...interface{}) {
 }
 
 // Warn log warnning level
-func (logger *HTTPLogger) Warn(args ...interface{}) {
-	//CaptureHTTPError(logger.ctx, sentry.LevelWarning, message, args...)
+func (logger *E2ELogger) Warn(args ...interface{}) {
 	_, fn, line, _ := runtime.Caller(1)
 	if logger.simple {
 		logger.log.Warn(args...)
@@ -72,8 +64,7 @@ func (logger *HTTPLogger) Warn(args ...interface{}) {
 }
 
 // Debug log debug level
-func (logger *HTTPLogger) Debug(args ...interface{}) {
-	//CaptureHTTPError(logger.ctx, sentry.LevelDebug, message, args...)
+func (logger *E2ELogger) Debug(args ...interface{}) {
 	_, fn, line, _ := runtime.Caller(1)
 	if logger.simple {
 		logger.log.Debug(args...)
@@ -83,8 +74,7 @@ func (logger *HTTPLogger) Debug(args ...interface{}) {
 }
 
 // Error log error level
-func (logger *HTTPLogger) Error(message error, args ...interface{}) {
-	CaptureHTTPError(logger.ctx, sentry.LevelError, message, args...)
+func (logger *E2ELogger) Error(message error, args ...interface{}) {
 	_, fn, line, _ := runtime.Caller(1)
 	if logger.simple {
 		logger.log.Error(message, args)

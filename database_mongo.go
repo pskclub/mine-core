@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"time"
 )
 
 const (
@@ -24,6 +25,16 @@ type DatabaseMongo struct {
 	Port     string
 }
 
+type MongoListIndexResult struct {
+	Key     map[string]int64 `json:"key" bson:"key"`
+	Name    string           `json:"name" bson:"name"`
+	Version int64            `json:"version" bson:"v"`
+}
+
+type MongoDropIndexResult struct {
+	DropCount int64 `json:"drop_count" bson:"nIndexesWas"`
+}
+
 func NewDatabaseMongo(env *ENVConfig) *DatabaseMongo {
 	return &DatabaseMongo{
 		Name:     env.DBMongoName,
@@ -34,7 +45,7 @@ func NewDatabaseMongo(env *ENVConfig) *DatabaseMongo {
 	}
 }
 
-// ConnectDB to connect Database
+// Connect to connect Database
 func (db *DatabaseMongo) Connect() (IMongoDB, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), connectTimeOut)
 	defer cancel()
@@ -55,10 +66,9 @@ func (db *DatabaseMongo) Connect() (IMongoDB, error) {
 type IMongoDB interface {
 	DB() *mongo.Database
 	Create(coll string, document interface{}, opts ...*options.InsertOneOptions) (*mongo.InsertOneResult, error)
-	FindAggregate(dest interface{}, coll string, pipeline []bson.M, opts ...*options.AggregateOptions) error
-	FindAggregatePagination(dest interface{}, coll string, pipeline []bson.M, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error)
-	FindAggregatePaginationCustomTotal(dest interface{}, coll string, pipeline []bson.M, pipelineTotalCount []bson.M, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error)
-	FindAggregateOne(dest interface{}, coll string, pipeline []bson.M, opts ...*options.AggregateOptions) error
+	FindAggregate(dest interface{}, coll string, pipeline interface{}, opts ...*options.AggregateOptions) error
+	FindAggregatePagination(dest interface{}, coll string, pipeline interface{}, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error)
+	FindAggregateOne(dest interface{}, coll string, pipeline interface{}, opts ...*options.AggregateOptions) error
 	Find(dest interface{}, coll string, filter interface{}, opts ...*options.FindOptions) error
 	FindPagination(dest interface{}, coll string, filter interface{}, pageOptions *PageOptions, opts ...*options.FindOptions) (*PageResponse, error)
 	FindOne(dest interface{}, coll string, filter interface{}, opts ...*options.FindOneOptions) error
@@ -71,6 +81,10 @@ type IMongoDB interface {
 	FindOneAndDelete(coll string, filter interface{}, opts ...*options.FindOneAndDeleteOptions) error
 	Close()
 	Helper() IMongoDBHelper
+	CreateIndex(coll string, models []mongo.IndexModel, opts ...*options.CreateIndexesOptions) ([]string, error)
+	DropIndex(coll string, name string, opts ...*options.DropIndexesOptions) (*MongoDropIndexResult, error)
+	DropAll(coll string, opts ...*options.DropIndexesOptions) (*MongoDropIndexResult, error)
+	ListIndex(coll string, opts ...*options.ListIndexesOptions) ([]MongoListIndexResult, error)
 }
 
 type MongoDB struct {
@@ -140,7 +154,7 @@ func (m MongoDB) Count(coll string, filter interface{}, opts ...*options.CountOp
 	return m.DB().Collection(coll).CountDocuments(ctx, filter, opts...)
 }
 
-func (m MongoDB) FindAggregate(dest interface{}, coll string, pipeline []bson.M, opts ...*options.AggregateOptions) error {
+func (m MongoDB) FindAggregate(dest interface{}, coll string, pipeline interface{}, opts ...*options.AggregateOptions) error {
 	ctx, cancel := m.getContext()
 	defer cancel()
 	cur, err := m.DB().Collection(coll).Aggregate(ctx, pipeline, opts...)
@@ -152,19 +166,20 @@ func (m MongoDB) FindAggregate(dest interface{}, coll string, pipeline []bson.M,
 	return cur.All(ctx, dest)
 }
 
-func (m MongoDB) FindAggregatePagination(dest interface{}, coll string, pipeline []bson.M, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error) {
+func (m MongoDB) FindAggregatePagination(dest interface{}, coll string, pipeline interface{}, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error) {
 	ctx, cancel := m.getContext()
 	defer cancel()
 	type Count struct {
 		Count int64 `bson:"_count"`
 	}
 	totalModel := &Count{}
-
-	countPipeline := pipeline
+	countPipeline, ok := pipeline.([]bson.M)
+	if !ok {
+		return nil, errors.New("pipeline is not []bson.M")
+	}
 	countPipeline = append(countPipeline, bson.M{
 		"$count": "_count",
 	})
-
 	err := m.FindAggregateOne(totalModel, coll, countPipeline)
 	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, err
@@ -172,12 +187,19 @@ func (m MongoDB) FindAggregatePagination(dest interface{}, coll string, pipeline
 
 	if pageOptions != nil {
 		skips := m.getSkips(pageOptions)
-		pipeline = append(pipeline,
+		pips, ok := pipeline.([]bson.M)
+		if !ok {
+			return nil, errors.New("pipeline is not []bson.M")
+		}
+
+		pips = append(pips,
 			bson.M{
 				"$skip": skips,
 			}, bson.M{
 				"$limit": pageOptions.Limit,
 			})
+
+		pipeline = pips
 	}
 
 	cur, err := m.DB().Collection(coll).Aggregate(ctx, pipeline, opts...)
@@ -200,53 +222,7 @@ func (m MongoDB) FindAggregatePagination(dest interface{}, coll string, pipeline
 	}, cur.All(ctx, dest)
 }
 
-func (m MongoDB) FindAggregatePaginationCustomTotal(dest interface{}, coll string, pipeline []bson.M, pipelineTotalCount []bson.M, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error) {
-	ctx, cancel := m.getContext()
-	defer cancel()
-	type Count struct {
-		Count int64 `bson:"_count"`
-	}
-	totalModel := &Count{}
-	pipelineTotalCount = append(pipelineTotalCount, bson.M{
-		"$count": "_count",
-	})
-
-	err := m.FindAggregateOne(totalModel, coll, pipelineTotalCount)
-	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
-		return nil, err
-	}
-
-	if pageOptions != nil {
-		skips := m.getSkips(pageOptions)
-		pipeline = append(pipeline,
-			bson.M{
-				"$skip": skips,
-			}, bson.M{
-				"$limit": pageOptions.Limit,
-			})
-	}
-
-	cur, err := m.DB().Collection(coll).Aggregate(ctx, pipeline, opts...)
-	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
-		return nil, err
-	}
-	defer cur.Close(ctx)
-
-	var count int64 = 0
-	for cur.Next(ctx) {
-		count++
-	}
-
-	return &PageResponse{
-		Total: totalModel.Count,
-		Limit: pageOptions.Limit,
-		Count: count,
-		Page:  pageOptions.Page,
-		Q:     pageOptions.Q,
-	}, cur.All(ctx, dest)
-}
-
-func (m MongoDB) FindAggregateOne(dest interface{}, coll string, pipeline []bson.M, opts ...*options.AggregateOptions) error {
+func (m MongoDB) FindAggregateOne(dest interface{}, coll string, pipeline interface{}, opts ...*options.AggregateOptions) error {
 	ctx, cancel := m.getContext()
 	defer cancel()
 	cur, err := m.DB().Collection(coll).Aggregate(ctx, pipeline, opts...)
@@ -342,6 +318,66 @@ func (m MongoDB) Create(coll string, document interface{}, opts ...*options.Inse
 	defer cancel()
 
 	return m.DB().Collection(coll).InsertOne(ctx, document, opts...)
+}
+
+func (m MongoDB) CreateIndex(coll string, models []mongo.IndexModel, opts ...*options.CreateIndexesOptions) ([]string, error) {
+	ctx, cancel := m.getContext()
+	defer cancel()
+
+	return m.DB().Collection(coll).Indexes().CreateMany(ctx, models, opts...)
+}
+
+func (m MongoDB) DropIndex(coll string, name string, opts ...*options.DropIndexesOptions) (*MongoDropIndexResult, error) {
+	ctx, cancel := m.getContext()
+	defer cancel()
+
+	result := &MongoDropIndexResult{}
+	b, err := m.DB().Collection(coll).Indexes().DropOne(ctx, name, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	err = bson.Unmarshal(b, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (m MongoDB) DropAll(coll string, opts ...*options.DropIndexesOptions) (*MongoDropIndexResult, error) {
+	ctx, cancel := m.getContext()
+	defer cancel()
+
+	result := &MongoDropIndexResult{}
+	b, err := m.DB().Collection(coll).Indexes().DropAll(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	err = bson.Unmarshal(b, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (m MongoDB) ListIndex(coll string, opts ...*options.ListIndexesOptions) ([]MongoListIndexResult, error) {
+	ctx, cancel := m.getContext()
+	defer cancel()
+
+	cursor, err := m.DB().Collection(coll).Indexes().List(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]MongoListIndexResult, 0)
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
 
 func (m MongoDB) DB() *mongo.Database {

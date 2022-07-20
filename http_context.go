@@ -6,23 +6,25 @@ import (
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
-	"github.com/pskclub/mine-core/consts"
+	"gitlab.finema.co/finema/idin-core/consts"
+	"gitlab.finema.co/finema/idin-core/utils"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type IHTTPContext interface {
 	IContext
 	echo.Context
 	BindWithValidate(ctx IValidateContext) IError
+	BindWithValidateMessage(ctx IValidateContext) IError
 	BindOnly(i interface{}) IError
+	GetSignature() string
+	GetMessage() string
 	GetPageOptions() *PageOptions
 	GetPageOptionsWithOptions(options *PageOptionsOptions) *PageOptions
 	GetUserAgent() *user_agent.UserAgent
-	WithSaveCache(data interface{}, key string, duration time.Duration) interface{}
 }
 
 type HTTPContext struct {
@@ -31,20 +33,50 @@ type HTTPContext struct {
 	logger ILogger
 }
 
+type HandlerFunc func(IHTTPContext) error
+
+type HTTPContextOptions struct {
+	ContextOptions *ContextOptions
+}
+
+func NewHTTPContext(ctx echo.Context, options *HTTPContextOptions) IHTTPContext {
+	ctxOptions := options.ContextOptions
+	ctxOptions.contextType = consts.HTTP
+	return &HTTPContext{Context: ctx, IContext: NewContext(ctxOptions)}
+}
+
+func WithHTTPContext(h HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		return h(c.(*HTTPContext))
+	}
+}
+
 type PageOptionsOptions struct {
 	OrderByAllowed []string
 }
 
-func (c *HTTPContext) WithSaveCache(data interface{}, key string, duration time.Duration) interface{} {
-	err := c.Cache().SetJSON(key, data, duration)
-	if err != nil {
-		c.NewError(err, Error{
-			Status:  http.StatusInternalServerError,
-			Code:    "CACHE_ERROR",
-			Message: "cache internal error"})
+func (c *HTTPContext) GetPageOptions() *PageOptions {
+	limit, _ := strconv.ParseInt(c.QueryParam("limit"), 10, 64)
+	page, _ := strconv.ParseInt(c.QueryParam("page"), 10, 64)
+
+	if limit <= 0 {
+		limit = consts.PageLimitDefault
 	}
 
-	return data
+	if limit > consts.PageLimitMax {
+		limit = consts.PageLimitMax
+	}
+
+	if page < 1 {
+		page = 1
+	}
+
+	return &PageOptions{
+		Q:       c.QueryParam("q"),
+		Limit:   limit,
+		Page:    page,
+		OrderBy: c.genOrderBy(c.QueryParam("order_by")),
+	}
 }
 
 func (c *HTTPContext) genOrderBy(s string) []string {
@@ -98,48 +130,6 @@ func (c *HTTPContext) GetPageOptionsWithOptions(options *PageOptionsOptions) *Pa
 	return pageOptions
 }
 
-func (c *HTTPContext) GetPageOptions() *PageOptions {
-	limit, _ := strconv.ParseInt(c.QueryParam("limit"), 10, 64)
-	page, _ := strconv.ParseInt(c.QueryParam("page"), 10, 64)
-
-	if limit <= 0 {
-		limit = consts.PageLimitDefault
-	}
-
-	if limit > consts.PageLimitMax {
-		limit = consts.PageLimitMax
-	}
-
-	if page < 1 {
-		page = 1
-	}
-
-	return &PageOptions{
-		Q:       c.QueryParam("q"),
-		Limit:   limit,
-		Page:    page,
-		OrderBy: c.genOrderBy(c.QueryParam("order_by")),
-	}
-}
-
-type HandlerFunc func(IHTTPContext) error
-
-type HTTPContextOptions struct {
-	ContextOptions *ContextOptions
-}
-
-func NewHTTPContext(ctx echo.Context, options *HTTPContextOptions) IHTTPContext {
-	ctxOptions := options.ContextOptions
-	ctxOptions.contextType = consts.HTTP
-	return &HTTPContext{Context: ctx, logger: nil, IContext: NewContext(ctxOptions)}
-}
-
-func WithHTTPContext(h HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		return h(c.(*HTTPContext))
-	}
-}
-
 func (c *HTTPContext) validateJSON(i interface{}) IError {
 	var body []byte
 	if c.Request().Body != nil {
@@ -161,10 +151,35 @@ func (c *HTTPContext) validateJSON(i interface{}) IError {
 			})
 
 		default:
-			return Error{
+			return &Error{
 				Status:  http.StatusBadRequest,
 				Code:    "INVALID_JSON",
 				Message: "Must be json format"}
+		}
+	}
+	return nil
+}
+
+func (c *HTTPContext) validateMessage(i interface{}) IError {
+	body, err := utils.Base64Decode(c.GetMessage())
+	err = json.Unmarshal(utils.StringToBytes(body), &i)
+	if err != nil {
+		switch err := err.(type) {
+		case *json.UnmarshalTypeError:
+			return NewValidatorFields(map[string]jsonErr{
+				err.Field: {
+					Code: "INVALID_TYPE",
+					Message: fmt.Sprintf("This %s field must be %s type",
+						err.Field, err.Type),
+				},
+			})
+
+		default:
+			return &Error{
+				Status:  http.StatusBadRequest,
+				Code:    "INVALID_JSON",
+				Message: "Message data must be json format",
+			}
 		}
 	}
 	return nil
@@ -179,12 +194,29 @@ func (c *HTTPContext) BindWithValidate(ctx IValidateContext) IError {
 	return ctx.Valid(c)
 }
 
+func (c *HTTPContext) BindWithValidateMessage(ctx IValidateContext) IError {
+	if err := c.validateMessage(ctx); err != nil {
+		newError := err.(IError)
+		return newError
+	}
+
+	return ctx.Valid(c)
+}
+
 func (c *HTTPContext) BindOnly(i interface{}) IError {
 	if err := c.validateJSON(i); err != nil {
 		return err
 	}
 	c.Bind(i)
 	return nil
+}
+
+func (c *HTTPContext) GetSignature() string {
+	return c.Request().Header.Get("x-signature")
+}
+
+func (c *HTTPContext) GetMessage() string {
+	return fmt.Sprintf("%s", c.Get("message"))
 }
 
 func (c *HTTPContext) Log() ILogger {

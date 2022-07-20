@@ -1,8 +1,10 @@
 package core
 
 import (
+	"fmt"
 	"github.com/getsentry/sentry-go"
 	"github.com/sirupsen/logrus"
+	"gitlab.finema.co/finema/idin-core/utils"
 	"io"
 	"os"
 	"runtime"
@@ -30,11 +32,9 @@ type Logger struct {
 func NewLogger(ctx IContext) *Logger {
 	logger := logrus.New()
 	logger.SetLevel(ctx.ENV().Config().LogLevel)
-	formatter := new(logrus.TextFormatter)
+	formatter := new(logrus.JSONFormatter)
 	formatter.TimestampFormat = "2006-01-02 15:04:05"
 	formatter.DisableTimestamp = false
-	formatter.DisableColors = false
-	formatter.DisableSorting = false
 	logger.Formatter = formatter
 	multi := io.MultiWriter(os.Stderr)
 	logger.Out = multi
@@ -50,10 +50,8 @@ func NewLogger(ctx IContext) *Logger {
 func NewLoggerSimple() *Logger {
 	log2 := logrus.New()
 	log2.SetLevel(NewEnv().Config().LogLevel)
-	formatter := new(logrus.TextFormatter)
+	formatter := new(logrus.JSONFormatter)
 	formatter.DisableTimestamp = true
-	formatter.DisableColors = true
-	formatter.DisableSorting = true
 
 	log2.Formatter = formatter
 	multi := io.MultiWriter(os.Stderr)
@@ -109,6 +107,7 @@ func (logger *Logger) Debug(args ...interface{}) {
 
 // Error log error level
 func (logger *Logger) Error(message error, args ...interface{}) {
+	logger.addBreadcrumb(message.Error(), sentry.LevelError, args)
 	CaptureError(logger.ctx, sentry.LevelError, message, args)
 	_, fn, line, _ := runtime.Caller(1)
 	if logger.simple {
@@ -116,4 +115,24 @@ func (logger *Logger) Error(message error, args ...interface{}) {
 	} else {
 		logger.log.WithFields(logger.getLogFields(fn, line)).Error(message, args)
 	}
+}
+
+func (logger *Logger) addBreadcrumb(message string, level sentry.Level, args ...interface{}) {
+	breadcrumbs, ok := logger.ctx.GetData("breadcrumb").([]sentry.Breadcrumb)
+	if !ok {
+		breadcrumbs = make([]sentry.Breadcrumb, 0)
+	}
+
+	argData := make(map[string]interface{})
+	for i, arg := range args {
+		argData[fmt.Sprintf("ARG-%v", i)] = arg
+	}
+
+	breadcrumbs = append(breadcrumbs, sentry.Breadcrumb{
+		Data:      argData,
+		Level:     level,
+		Message:   message,
+		Timestamp: *utils.GetCurrentDateTime(),
+	})
+	logger.ctx.SetData("breadcrumbs", breadcrumbs)
 }

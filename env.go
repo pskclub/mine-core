@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"os"
 	"strings"
 )
 
 const EnvFileName = ".env"
-const EnvTestFileName = "env_test"
+const EnvTestFileName = "test.env"
 
 type IENV interface {
 	Config() *ENVConfig
@@ -50,18 +51,12 @@ type ENVConfig struct {
 	MQPassword string `mapstructure:"mq_password"`
 	MQPort     string `mapstructure:"mq_port"`
 
-	S3Endpoint  string `mapstructure:"s3_endpoint"`
-	S3AccessKey string `mapstructure:"s3_access_key"`
-	S3SecretKey string `mapstructure:"s3_secret_key"`
-	S3Bucket    string `mapstructure:"s3_bucket"`
-	S3IsHTTPS   bool   `mapstructure:"s3_https"`
-
 	CachePort string `mapstructure:"cache_port"`
 	CacheHost string `mapstructure:"cache_host"`
 
-	ELSAddress  string `mapstructure:"els_address"`
-	ELSUser     string `mapstructure:"els_user"`
-	ELSPassword string `mapstructure:"els_password"`
+	ABCIEndpoint      string `mapstructure:"abci_endpoint"`
+	DIDMethodDefault  string `mapstructure:"did_method_default"`
+	DIDKeyTypeDefault string `mapstructure:"did_key_type_default"`
 }
 
 type ENVType struct {
@@ -73,7 +68,11 @@ func NewEnv() IENV {
 }
 
 func NewENVPath(path string) IENV {
-	viper.SetConfigName(EnvFileName)
+	if os.Getenv("APP_ENV") == "test" {
+		viper.SetConfigName(EnvTestFileName)
+	} else {
+		viper.SetConfigName(EnvFileName)
+	}
 
 	viper.SetConfigType("env")
 	viper.AddConfigPath(path)
@@ -83,12 +82,12 @@ func NewENVPath(path string) IENV {
 	envKeys := []string{
 		"LOG_HOST",
 		"HOST", "ENV", "SERVICE",
-		"SENTRY_DSN", "DB_DRIVER", "DB_HOST", "DB_HOST",
-		"DB_NAME", "DB_USER", "DB_PASSWORD", "DB_PORT", "DB_MONGO_HOST",
-		"DB_MONGO_NAME", "DB_MONGO_USERNAME", "DB_MONGO_PASSWORD", "DB_MONGO_PORT",
-		"MQ_HOST", "MQ_USER", "MQ_PASSWORD", "MQ_PORT", "S3_ENDPOINT",
-		"S3_ACCESS_KEY", "S3_SECRET_KEY", "S3_BUCKET", "S3_HTTPS",
-		"CACHE_PORT", "CACHE_HOST", "ELS_ADDRESS", "ELS_USER", "ELS_PASSWORD",
+		"SENTRY_DSN",
+		"DB_DRIVER", "DB_HOST", "DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD", "DB_PORT",
+		"DB_MONGO_HOST", "DB_MONGO_NAME", "DB_MONGO_USERNAME", "DB_MONGO_PASSWORD", "DB_MONGO_PORT",
+		"MQ_HOST", "MQ_USER", "MQ_PASSWORD", "MQ_PORT",
+		"CACHE_PORT", "CACHE_HOST",
+		"ABCI_ENDPOINT", "DID_METHOD_DEFAULT", "DID_KEY_TYPE_DEFAULT",
 	}
 
 	for _, key := range envKeys {
@@ -111,7 +110,7 @@ func (e ENVType) Config() *ENVConfig {
 	return e.config
 }
 
-// config  is Dev config
+// IsDev config  is Dev config
 func (e ENVType) IsDev() bool {
 	return e.String("env") == "dev"
 }
@@ -120,12 +119,12 @@ func (e ENVType) IsMock() bool {
 	return e.String("env") == "mock"
 }
 
-// config  is Test config
+// IsTest config  is Test config
 func (e ENVType) IsTest() bool {
 	return e.String("env") == "test"
 }
 
-// config  is production config
+// IsProd config  is production config
 func (e ENVType) IsProd() bool {
 	return e.String("env") == "prod"
 }

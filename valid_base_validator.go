@@ -2,15 +2,16 @@ package core
 
 import (
 	"encoding/json"
-	"github.com/pskclub/mine-core/utils"
-	"github.com/thedevsaddam/gojsonq/v2"
-	"gopkg.in/asaskevich/govalidator.v9"
 	"net/url"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/thedevsaddam/gojsonq/v2"
+	"gitlab.finema.co/finema/idin-core/utils"
+	"gopkg.in/asaskevich/govalidator.v9"
 )
 
 const DateFormat = "2006-01-02 15:04:05"

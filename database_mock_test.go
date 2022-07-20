@@ -5,8 +5,13 @@ import (
 	"testing"
 )
 
+func TestNewMockGorm(t *testing.T) {
+	m := NewMockDatabase()
+	assert.NotNil(t, m.Gorm)
+	assert.NotNil(t, m.Mock)
+}
+
 func TestNewMockDatabase(t *testing.T) {
-	mock := NewMockDatabase()
-	assert.NotNil(t, mock.Gorm)
-	assert.NotNil(t, mock.Mock)
+	m := NewMockDatabase()
+	assert.NotNil(t, m)
 }

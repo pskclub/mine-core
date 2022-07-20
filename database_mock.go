@@ -12,8 +12,8 @@ type MockDatabase struct {
 }
 
 func NewMockDatabase() *MockDatabase {
-	db, mock, _ := sqlmock.New()
-	mock.ExpectQuery("SELECT VERSION()").
+	db, sqlMock, _ := sqlmock.New()
+	sqlMock.ExpectQuery("SELECT VERSION()").
 		WillReturnRows(sqlmock.NewRows([]string{"VERSION()"}).AddRow("5.7.33"))
 	newDB, _ := gorm.Open(mysql.New(mysql.Config{
 		Conn: db,
@@ -21,6 +21,6 @@ func NewMockDatabase() *MockDatabase {
 
 	return &MockDatabase{
 		Gorm: newDB,
-		Mock: mock,
+		Mock: sqlMock,
 	}
 }
