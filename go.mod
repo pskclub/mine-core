@@ -1,4 +1,4 @@
-module gitlab.finema.co/finema/idin-core
+module github.com/pskclub/mine-core
 
 go 1.18
 

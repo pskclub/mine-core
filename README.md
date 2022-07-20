@@ -1,4 +1,4 @@
-idin-core for golang
+mine-core for golang
 
 # get started
 

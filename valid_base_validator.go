@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/thedevsaddam/gojsonq/v2"
-	"gitlab.finema.co/finema/idin-core/utils"
+	"github.com/pskclub/mine-core/utils"
 	"gopkg.in/asaskevich/govalidator.v9"
 )
 

@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 	"github.com/go-errors/errors"
-	"gitlab.finema.co/finema/idin-core/consts"
+	"github.com/pskclub/mine-core/consts"
 	"gorm.io/gorm"
 )
 

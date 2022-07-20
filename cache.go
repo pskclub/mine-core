@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
-	"gitlab.finema.co/finema/idin-core/utils"
+	"github.com/pskclub/mine-core/utils"
 	"time"
 )
 

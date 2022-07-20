@@ -2,8 +2,8 @@ package core
 
 import (
 	"github.com/tidwall/gjson"
-	"gitlab.finema.co/finema/idin-core/consts"
-	"gitlab.finema.co/finema/idin-core/utils"
+	"github.com/pskclub/mine-core/consts"
+	"github.com/pskclub/mine-core/utils"
 )
 
 type IABCIContext interface {

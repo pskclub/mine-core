@@ -8,7 +8,7 @@ import (
 	"github.com/gojektech/heimdall/v6/httpclient"
 	"github.com/gojektech/heimdall/v6/plugins"
 	"github.com/sirupsen/logrus"
-	"gitlab.finema.co/finema/idin-core/utils"
+	"github.com/pskclub/mine-core/utils"
 	"io"
 	"io/ioutil"
 	"mime/multipart"

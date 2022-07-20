@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/stretchr/testify/mock"
-	"gitlab.finema.co/finema/idin-core/consts"
+	"github.com/pskclub/mine-core/consts"
 	"gorm.io/gorm"
 )
 

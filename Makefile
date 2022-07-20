@@ -11,4 +11,4 @@ install:
 	go get
 
 build-docker:
-	docker build -t registry.finema.co/finema/idin-core:1.3.0 -t registry.finema.co/finema/idin-core:latest . && docker push registry.finema.co/finema/idin-core:1.3.0 && docker push registry.finema.co/finema/idin-core:latest
+	docker build -t registry.finema.co/finema/mine-core:1.3.0 -t registry.finema.co/finema/mine-core:latest . && docker push registry.finema.co/finema/mine-core:1.3.0 && docker push registry.finema.co/finema/mine-core:latest

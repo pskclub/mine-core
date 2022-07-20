@@ -1,7 +1,7 @@
 package core
 
 import (
-	"gitlab.finema.co/finema/idin-core/consts"
+	"github.com/pskclub/mine-core/consts"
 )
 
 type IE2EContext interface {

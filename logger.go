@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/getsentry/sentry-go"
 	"github.com/sirupsen/logrus"
-	"gitlab.finema.co/finema/idin-core/utils"
+	"github.com/pskclub/mine-core/utils"
 	"io"
 	"os"
 	"runtime"

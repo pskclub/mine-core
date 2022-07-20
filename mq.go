@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
-	"gitlab.finema.co/finema/idin-core/utils"
+	"github.com/pskclub/mine-core/utils"
 )
 
 type MQ struct {
