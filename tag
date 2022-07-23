@@ -17,7 +17,7 @@ GIT_COMMIT=`git rev-parse HEAD`
 NEEDS_TAG=`git describe --contains $GIT_COMMIT`
 
 #Create new tag
-NEW_TAG="$MAJOR.$MINOR.$PATCH"
+NEW_TAG="v2.0.5"
 echo "Updating to $NEW_TAG"
 
 #Only tag if no tag already (would be better if the git describe command above could have a silent option)
