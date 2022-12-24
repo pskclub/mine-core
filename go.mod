@@ -33,6 +33,7 @@ require (
 )
 
 require (
+	github.com/aws/aws-sdk-go v1.44.167 // indirect
 	github.com/cactus/go-statsd-client v3.0.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -63,6 +64,7 @@ require (
 	github.com/jackc/pgx/v4 v4.16.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/karrick/godirwalk v1.10.3 // indirect
@@ -100,10 +102,10 @@ require (
 	github.com/yudai/pp v2.0.1+incompatible // indirect
 	go.opentelemetry.io/otel/metric v0.31.0 // indirect
 	golang.org/x/image v0.0.0-20220617043117-41969df76e82 // indirect
-	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
-	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
-	golang.org/x/sys v0.0.0-20220712014510-0a85c31ab51e // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/net v0.1.0 // indirect
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
+	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
