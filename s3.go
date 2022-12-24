@@ -29,6 +29,7 @@ type S3Config struct {
 func (r *S3Config) Connect() (IS3, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region:      aws.String(r.Region),
+		Endpoint:    aws.String(r.Endpoint),
 		Credentials: credentials.NewStaticCredentials(r.AccessKey, r.SecretKey, ""),
 	})
 	if err != nil {
