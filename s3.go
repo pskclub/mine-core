@@ -2,12 +2,13 @@ package core
 
 import (
 	"bytes"
-	"context"
 	"errors"
-	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	ss3 "github.com/aws/aws-sdk-go/service/s3"
 	"github.com/disintegration/imaging"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/pskclub/mine-core/utils"
 	"image/jpeg"
 	"io"
 	"net/http"
@@ -24,25 +25,28 @@ type S3Config struct {
 	IsHTTPS   bool
 }
 
-func (r S3Config) Connect() (IS3, error) {
-	minioClient, err := minio.New(r.Endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(r.AccessKey, r.SecretKey, ""),
-		Secure: r.IsHTTPS,
+func (r *S3Config) Connect() (IS3, error) {
+	sess, err := session.NewSession(&aws.Config{
+		Region:      aws.String("ap-southeast-1"),
+		Credentials: credentials.NewStaticCredentials(r.AccessKey, r.SecretKey, ""),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &s3{client: minioClient}, nil
+	svc := ss3.New(sess)
+	return &s3{client: svc, config: r}, nil
 }
 
 type IS3 interface {
-	PutObject(bucketName, objectName string, reader io.Reader, opts minio.PutObjectOptions, uploadOptions *UploadOptions) (*minio.UploadInfo, error)
-	PutObjectByURL(bucketName, objectName string, url string, opts minio.PutObjectOptions, uploadOptions *UploadOptions) (*minio.UploadInfo, error)
+	GetObject(path string, opts *ss3.GetObjectInput) (*ss3.GetObjectOutput, error)
+	PutObject(objectName string, file io.ReadSeeker, opts *ss3.PutObjectInput, uploadOptions *UploadOptions) (*ss3.PutObjectOutput, error)
+	PutObjectByURL(objectName string, url string, opts *ss3.PutObjectInput, uploadOptions *UploadOptions) (*ss3.PutObjectOutput, error)
 }
 
 type s3 struct {
-	client *minio.Client
+	client *ss3.S3
+	config *S3Config
 }
 
 func NewS3(env *ENVConfig) *S3Config {
@@ -61,22 +65,8 @@ type UploadOptions struct {
 	Quality int64
 }
 
-func (r s3) PutObject(bucketName, objectName string, file io.Reader, opts minio.PutObjectOptions, uploadOptions *UploadOptions) (*minio.UploadInfo, error) {
-	err := r.client.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{})
-	if err != nil {
-		isExists, err := r.client.BucketExists(context.Background(), bucketName)
-		if err == nil && !isExists {
-			return nil, err
-		}
-	} else {
-		policy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetBucketLocation","s3:ListBucket","s3:ListBucketMultipartUploads"],"Resource":["arn:aws:s3:::%s"]},{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject","s3:ListMultipartUploadParts","s3:PutObject","s3:AbortMultipartUpload","s3:DeleteObject"],"Resource":["arn:aws:s3:::%s/*"]}]}`, bucketName, bucketName)
-		err = r.client.SetBucketPolicy(context.Background(), bucketName, policy)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var reader *bytes.Reader = nil
+func (r s3) PutObject(objectName string, file io.ReadSeeker, opts *ss3.PutObjectInput, uploadOptions *UploadOptions) (*ss3.PutObjectOutput, error) {
+	var reader = file
 	if uploadOptions != nil && (uploadOptions.Height != 0 || uploadOptions.Width != 0 || uploadOptions.Quality != 0) {
 		img, err := imaging.Decode(file)
 		if err != nil {
@@ -92,23 +82,38 @@ func (r s3) PutObject(bucketName, objectName string, file io.Reader, opts minio.
 		reader = bytes.NewReader(buf.Bytes())
 	}
 
-	var info minio.UploadInfo
-	if reader != nil {
-		info, err = r.client.PutObject(context.Background(), bucketName, objectName, reader, -1, opts)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		info, err = r.client.PutObject(context.Background(), bucketName, objectName, file, -1, opts)
-		if err != nil {
-			return nil, err
-		}
+	if opts == nil {
+		opts = &ss3.PutObjectInput{}
 	}
 
-	return &info, nil
+	opts.Bucket = aws.String(r.config.Bucket)
+	opts.Key = aws.String(objectName)
+	opts.Body = reader
+
+	req, err := r.client.PutObject(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
-func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio.PutObjectOptions, uploadOptions *UploadOptions) (*minio.UploadInfo, error) {
+func (r s3) GetObject(path string, opts *ss3.GetObjectInput) (*ss3.GetObjectOutput, error) {
+	if opts == nil {
+		opts = &ss3.GetObjectInput{}
+	}
+
+	opts.Bucket = aws.String(r.config.Bucket)
+	opts.Key = aws.String(path)
+	result, err := r.client.GetObject(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (r s3) PutObjectByURL(objectName string, url string, opts *ss3.PutObjectInput, uploadOptions *UploadOptions) (*ss3.PutObjectOutput, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -119,12 +124,17 @@ func (r s3) PutObjectByURL(bucketName, objectName string, url string, opts minio
 		return nil, errors.New("Something went wrong , status code: " + strconv.Itoa(resp.StatusCode))
 	}
 
-	opts.ContentType = resp.Header.Get("Content-type")
-	if opts.ContentType == "" {
-		opts.ContentType = "application/octet-stream"
+	opts.ContentType = aws.String(resp.Header.Get("Content-type"))
+	if utils.GetString(opts.ContentType) == "" {
+		opts.ContentType = aws.String("application/octet-stream")
 	}
 
 	extension := filepath.Ext(path.Base(resp.Request.URL.Path))
 
-	return r.PutObject(bucketName, objectName+extension, resp.Body, opts, uploadOptions)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.PutObject(objectName+extension, bytes.NewReader(body), opts, uploadOptions)
 }
