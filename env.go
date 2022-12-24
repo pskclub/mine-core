@@ -54,6 +54,7 @@ type ENVConfig struct {
 	S3AccessKey string `mapstructure:"s3_access_key"`
 	S3SecretKey string `mapstructure:"s3_secret_key"`
 	S3Bucket    string `mapstructure:"s3_bucket"`
+	S3Region    string `mapstructure:"s3_region"`
 	S3IsHTTPS   bool   `mapstructure:"s3_https"`
 
 	CachePort string `mapstructure:"cache_port"`
@@ -87,7 +88,7 @@ func NewENVPath(path string) IENV {
 		"DB_NAME", "DB_USER", "DB_PASSWORD", "DB_PORT", "DB_MONGO_HOST",
 		"DB_MONGO_NAME", "DB_MONGO_USERNAME", "DB_MONGO_PASSWORD", "DB_MONGO_PORT",
 		"MQ_HOST", "MQ_USER", "MQ_PASSWORD", "MQ_PORT", "S3_ENDPOINT",
-		"S3_ACCESS_KEY", "S3_SECRET_KEY", "S3_BUCKET", "S3_HTTPS",
+		"S3_ACCESS_KEY", "S3_SECRET_KEY", "S3_BUCKET", "S3_HTTPS", "S3_REGION",
 		"CACHE_PORT", "CACHE_HOST", "ELS_ADDRESS", "ELS_USER", "ELS_PASSWORD",
 	}
 

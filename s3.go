@@ -21,13 +21,14 @@ type S3Config struct {
 	Endpoint  string
 	AccessKey string
 	SecretKey string
+	Region    string
 	Bucket    string
 	IsHTTPS   bool
 }
 
 func (r *S3Config) Connect() (IS3, error) {
 	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String("ap-southeast-1"),
+		Region:      aws.String(r.Region),
 		Credentials: credentials.NewStaticCredentials(r.AccessKey, r.SecretKey, ""),
 	})
 	if err != nil {
@@ -55,6 +56,7 @@ func NewS3(env *ENVConfig) *S3Config {
 		AccessKey: env.S3AccessKey,
 		SecretKey: env.S3SecretKey,
 		Bucket:    env.S3Bucket,
+		Region:    env.S3Region,
 		IsHTTPS:   env.S3IsHTTPS,
 	}
 }
