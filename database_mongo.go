@@ -84,6 +84,7 @@ type IMongoDB interface {
 	DropIndex(coll string, name string, opts ...*options.DropIndexesOptions) (*MongoDropIndexResult, error)
 	DropAll(coll string, opts ...*options.DropIndexesOptions) (*MongoDropIndexResult, error)
 	ListIndex(coll string, opts ...*options.ListIndexesOptions) ([]MongoListIndexResult, error)
+	FindAggregatePaginationCustomTotal(dest interface{}, coll string, pipeline []bson.M, pipelineTotalCount []bson.M, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error)
 }
 
 type MongoDB struct {
@@ -199,6 +200,52 @@ func (m MongoDB) FindAggregatePagination(dest interface{}, coll string, pipeline
 			})
 
 		pipeline = pips
+	}
+
+	cur, err := m.DB().Collection(coll).Aggregate(ctx, pipeline, opts...)
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var count int64 = 0
+	for cur.Next(ctx) {
+		count++
+	}
+
+	return &PageResponse{
+		Total: totalModel.Count,
+		Limit: pageOptions.Limit,
+		Count: count,
+		Page:  pageOptions.Page,
+		Q:     pageOptions.Q,
+	}, cur.All(ctx, dest)
+}
+
+func (m MongoDB) FindAggregatePaginationCustomTotal(dest interface{}, coll string, pipeline []bson.M, pipelineTotalCount []bson.M, pageOptions *PageOptions, opts ...*options.AggregateOptions) (*PageResponse, error) {
+	ctx, cancel := m.getContext()
+	defer cancel()
+	type Count struct {
+		Count int64 `bson:"_count"`
+	}
+	totalModel := &Count{}
+	pipelineTotalCount = append(pipelineTotalCount, bson.M{
+		"$count": "_count",
+	})
+
+	err := m.FindAggregateOne(totalModel, coll, pipelineTotalCount)
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+		return nil, err
+	}
+
+	if pageOptions != nil {
+		skips := m.getSkips(pageOptions)
+		pipeline = append(pipeline,
+			bson.M{
+				"$skip": skips,
+			}, bson.M{
+				"$limit": pageOptions.Limit,
+			})
 	}
 
 	cur, err := m.DB().Collection(coll).Aggregate(ctx, pipeline, opts...)
