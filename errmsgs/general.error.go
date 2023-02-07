@@ -58,6 +58,11 @@ var (
 		Status:  http.StatusBadRequest,
 		Code:    "INVALID_JSON",
 		Message: "Must be json format"}
+
+	ELSError = core.Error{
+		Status:  http.StatusBadRequest,
+		Code:    "ELASTICSEARCH_ERROR",
+		Message: "elasticsearch something went wrong"}
 )
 
 func NotFoundCustomError(key string) core.Error {
