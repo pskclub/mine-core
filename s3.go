@@ -12,8 +12,6 @@ import (
 	"image/jpeg"
 	"io"
 	"net/http"
-	"path"
-	"path/filepath"
 	"strconv"
 )
 
@@ -132,12 +130,10 @@ func (r s3) PutObjectByURL(objectName string, url string, opts *ss3.PutObjectInp
 		opts.ContentType = aws.String("application/octet-stream")
 	}
 
-	extension := filepath.Ext(path.Base(resp.Request.URL.Path))
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.PutObject(objectName+extension, bytes.NewReader(body), opts, uploadOptions)
+	return r.PutObject(objectName, bytes.NewReader(body), opts, uploadOptions)
 }
