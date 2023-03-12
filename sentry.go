@@ -5,6 +5,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/labstack/echo/v4"
+	"github.com/pskclub/mine-core/utils"
 	"io/ioutil"
 )
 
@@ -12,7 +13,8 @@ func CaptureError(ctx IContext, level sentry.Level, err error, args ...interface
 	if true {
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
 			scope.SetRequest(nil)
-			scope.SetContext("env", ctx.ENV().All())
+			valueMap, _ := utils.StructToMap(ctx.ENV().All())
+			scope.SetContext("env", valueMap)
 			scope.SetLevel(level)
 			breadcrumbs, ok := ctx.GetData("breadcrumb").([]sentry.Breadcrumb)
 			if !ok {
@@ -50,7 +52,8 @@ func CaptureHTTPError(ctx IHTTPContext, level sentry.Level, err error, args ...i
 				}
 
 				scope.SetRequest(ctx.Request())
-				scope.SetContext("env", ctx.ENV().All())
+				valueMap, _ := utils.StructToMap(ctx.ENV().All())
+				scope.SetContext("env", valueMap)
 				scope.SetLevel(level)
 				scope.SetRequestBody(GetBodyString(ctx))
 				scope.SetUser(sentry.User{
