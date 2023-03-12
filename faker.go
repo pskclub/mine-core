@@ -1,8 +1,6 @@
 package core
 
-import (
-	"github.com/bxcodec/faker/v3"
-)
+import "github.com/go-faker/faker/v4"
 
 func Fake(a interface{}) error {
 	return faker.FakeData(a)
