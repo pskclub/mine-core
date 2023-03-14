@@ -117,7 +117,7 @@ func (db *Database) Connect() (*gorm.DB, error) {
 }
 
 func Paginate(db *gorm.DB, model interface{}, options *PageOptions) (*PageResponse, error) {
-	if options.Page == 0 {
+	if options.Page < 1 {
 		options.Page = 1
 	}
 
@@ -130,13 +130,11 @@ func Paginate(db *gorm.DB, model interface{}, options *PageOptions) (*PageRespon
 	}
 
 	var totalCount int64
-	err := db.Model(model).Count(&totalCount).Error
-	if err != nil {
+	if err := db.Model(model).Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
 
-	err = db.Limit(int(options.Limit)).Offset(int(offset)).Find(model).Error
-	if err != nil {
+	if err := db.Limit(int(options.Limit)).Offset(int(offset)).Find(model).Error; err != nil {
 		return nil, err
 	}
 
