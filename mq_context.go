@@ -2,22 +2,32 @@ package core
 
 import (
 	"fmt"
-	"github.com/go-errors/errors"
 	"github.com/pskclub/mine-core/consts"
+	"github.com/streadway/amqp"
 )
 
 type IMQContext interface {
 	IContext
 	AddConsumer(handlerFunc func(ctx IMQContext))
+	Consume(name string, onConsume func(message amqp.Delivery), options *MQConsumeOptions)
+	Start()
 }
 
 type MQContext struct {
 	IContext
-	logger ILogger
+}
+
+func (c *MQContext) Start() {
+	fmt.Println(fmt.Sprintf("MQ Consumer Service: %s", c.ENV().Config().Service))
+	select {}
 }
 
 func (c *MQContext) AddConsumer(handlerFunc func(ctx IMQContext)) {
-	go handlerFunc(c)
+	handlerFunc(c)
+}
+
+func (c *MQContext) Consume(name string, onConsume func(message amqp.Delivery), options *MQConsumeOptions) {
+	go c.MQ().Consume(c, name, onConsume, options)
 }
 
 type MQContextOptions struct {
@@ -27,17 +37,5 @@ type MQContextOptions struct {
 func NewMQContext(options *MQContextOptions) IMQContext {
 	ctxOptions := options.ContextOptions
 	ctxOptions.contextType = consts.MQ
-	return &MQContext{logger: nil, IContext: NewContext(ctxOptions)}
-}
-
-func (c *MQContext) NewError(err error, errorType IError, args ...interface{}) IError {
-	if err != nil {
-		errWrap := errors.Wrap(err, 1)
-		if errorType.GetStatus() >= 500 {
-			fmt.Println(errWrap.ErrorStack())
-			c.Log().Error(errWrap, args...)
-		}
-
-	}
-	return errorType
+	return &MQContext{IContext: NewContext(ctxOptions)}
 }

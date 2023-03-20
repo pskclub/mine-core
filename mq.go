@@ -2,12 +2,16 @@ package core
 
 import (
 	"fmt"
-	"github.com/getsentry/sentry-go"
 	"github.com/go-errors/errors"
 	"github.com/pskclub/mine-core/utils"
-	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
+	"net/http"
 )
+
+var MQError = Error{
+	Status:  http.StatusInternalServerError,
+	Code:    "MQ_ERROR",
+	Message: "mq internal error"}
 
 type MQ struct {
 	Host     string
@@ -17,8 +21,8 @@ type MQ struct {
 }
 
 type MQPublishOptions struct {
-	MessageID    string
 	Exchange     string
+	MessageID    string
 	Durable      bool
 	AutoDelete   bool
 	Exclusive    bool
@@ -32,7 +36,7 @@ type MQPublishOptions struct {
 type IMQ interface {
 	Close()
 	PublishJSON(name string, data interface{}, options *MQPublishOptions) error
-	Consume(name string, onConsume func(message amqp.Delivery), options *MQConsumeOptions) error
+	Consume(ctx IMQContext, name string, onConsume func(message amqp.Delivery), options *MQConsumeOptions)
 	Conn() *amqp.Connection
 	ReConnect()
 }
@@ -83,10 +87,11 @@ func (m mq) PublishJSON(name string, data interface{}, options *MQPublishOptions
 		return err
 	}
 
-	if NewEnv().Config().LogLevel == logrus.DebugLevel {
-		fmt.Println(fmt.Sprintf("Publish a message at '%s' channel", name))
+	//if NewEnv().Config().LogLevel == logrus.DebugLevel {
+	//	fmt.Printf("Publish a message at '%s' channel\n", name)
+	//}
 
-	}
+	fmt.Printf("Publish a message at '%s' channel\n", name)
 
 	return nil
 }
@@ -102,11 +107,11 @@ type MQConsumeOptions struct {
 	Consumer   string
 }
 
-func (m mq) Consume(name string, onConsume func(message amqp.Delivery), options *MQConsumeOptions) error {
+func (m mq) Consume(ctx IMQContext, name string, onConsume func(message amqp.Delivery), options *MQConsumeOptions) {
 	m.ReConnect()
 	ch, err := m.Conn().Channel()
 	if err != nil {
-		return err
+		ctx.NewError(err, MQError)
 	}
 
 	defer ch.Close()
@@ -120,7 +125,16 @@ func (m mq) Consume(name string, onConsume func(message amqp.Delivery), options 
 		options.Args,       // arguments
 	)
 	if err != nil {
-		return err
+		ctx.NewError(err, MQError)
+	}
+
+	err = ch.Qos(
+		1,     // prefetch count
+		0,     // prefetch size
+		false, // global
+	)
+	if err != nil {
+		ctx.NewError(err, MQError)
 	}
 
 	msgs, err := ch.Consume(
@@ -133,28 +147,30 @@ func (m mq) Consume(name string, onConsume func(message amqp.Delivery), options 
 		options.Args,      // args
 	)
 	if err != nil {
-		return err
+		ctx.NewError(err, MQError)
 	}
 
-	forever := make(chan bool)
+	var forever chan struct{}
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
 				errmsg := errors.New(fmt.Sprintf("%v", err))
 				fmt.Println(errmsg)
-				CaptureSimpleError(sentry.LevelFatal, errors.New(fmt.Sprintf("%v", err)))
+				ctx.NewError(errmsg, MQError)
 			}
 		}()
 
 		for d := range msgs {
-			if NewEnv().Config().LogLevel == logrus.DebugLevel {
-				fmt.Println(fmt.Sprintf("Received a message at '%s' channel", name))
-			}
+			//if NewEnv().Config().LogLevel == logrus.DebugLevel {
+			//	fmt.Println(fmt.Sprintf("Received a message at '%s' channel", name))
+			//}
+
+			fmt.Println(fmt.Sprintf("Received a message at '%s' channel", name))
+
 			onConsume(d)
 		}
 	}()
 	<-forever
-	return nil
 }
 
 func NewMQ(env *ENVConfig) *MQ {
