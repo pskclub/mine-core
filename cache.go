@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/pskclub/mine-core/utils"
+	"strings"
 	"time"
 )
 
@@ -64,7 +65,23 @@ func (c cache) Get(dest interface{}, key string) error {
 }
 
 func (c cache) Del(key string) error {
-	return c.rdb.Del(ctx, key).Err()
+	if strings.Contains(key, "*") {
+		iter := c.rdb.Scan(ctx, 0, key, 0).Iterator()
+		if err := iter.Err(); err != nil {
+			return err
+		}
+
+		for iter.Next(ctx) {
+			err := c.rdb.Del(ctx, iter.Val()).Err()
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	} else {
+		return c.rdb.Del(ctx, key).Err()
+	}
 }
 
 func (c cache) SetJSON(key string, value interface{}, expiration time.Duration) error {
@@ -81,4 +98,3 @@ func (c cache) GetJSON(dest interface{}, key string) error {
 
 	return utils.JSONParse(utils.StringToBytes(str), dest)
 }
-
