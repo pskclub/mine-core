@@ -1,6 +1,8 @@
 package utils
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 func GetString(v *string) string {
 	if v == nil {
@@ -81,6 +83,12 @@ func GetBoolFalse(v *bool) bool {
 		return false
 	}
 	e := *v
-
 	return e
+}
+
+func ToPointer[T comparable](v T) *T {
+	return &v
+}
+func ToNonPointer[T comparable](v *T) T {
+	return *v
 }

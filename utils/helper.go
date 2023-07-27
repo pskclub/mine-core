@@ -24,6 +24,14 @@ func StructToString(v interface{}) string {
 	return string(value)
 }
 
+func StructToStringNoPretty(v interface{}) string {
+	value, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(value)
+}
+
 func LogStruct(v interface{}) {
 	fmt.Println(StructToString(v))
 }

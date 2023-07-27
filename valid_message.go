@@ -97,6 +97,57 @@ var NumberMaxM = func(field string, size int64) *IValidMessage {
 	}
 }
 
+var StringContainM = func(field string, substr string) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_STRING_CONTAIN",
+		Message: fmt.Sprintf("The %v field must contain %v", field, substr),
+		Data:    substr,
+	}
+}
+
+var StringNotContainM = func(field string, substr string) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_STRING_NOT_CONTAIN",
+		Message: fmt.Sprintf("The %v field must not contain %v", field, substr),
+		Data:    substr,
+	}
+}
+
+var StringStartWithM = func(field string, substr string) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_STRING_START_WITH",
+		Message: fmt.Sprintf("The %v field must start with %v", field, substr),
+		Data:    substr,
+	}
+}
+
+var StringEndWithM = func(field string, substr string) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_STRING_END_WITH",
+		Message: fmt.Sprintf("The %v field must end with %v", field, substr),
+		Data:    substr,
+	}
+}
+
+var StringLowercaseM = func(field string) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_STRING_LOWERCASE",
+		Message: fmt.Sprintf("The %v field must be lowercase", field),
+	}
+}
+
+var StringUppercaseM = func(field string) *IValidMessage {
+	return &IValidMessage{
+		Name:    field,
+		Code:    "INVALID_STRING_UPPERCASE",
+		Message: fmt.Sprintf("The %v field must be uppercase", field),
+	}
+}
 var UniqueM = func(field string) *IValidMessage {
 	return &IValidMessage{
 		Name:    field,
