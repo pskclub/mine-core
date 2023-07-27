@@ -7,7 +7,6 @@ import (
 )
 
 func NewMQServer(options *MQContextOptions) IMQContext {
-	// To initialize Sentry's handler, you need to initialize Sentry itself beforehand
 	if options.ContextOptions.ENV.Config().SentryDSN != "" {
 		if err := sentry.Init(sentry.ClientOptions{
 			Dsn: options.ContextOptions.ENV.Config().SentryDSN,

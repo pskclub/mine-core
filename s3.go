@@ -31,6 +31,7 @@ func (r *S3Config) Connect() (IS3, error) {
 		Region:      aws.String(r.Region),
 		Endpoint:    aws.String(r.Endpoint),
 		Credentials: credentials.NewStaticCredentials(r.AccessKey, r.SecretKey, ""),
+		DisableSSL:  aws.Bool(!r.IsHTTPS),
 	})
 	if err != nil {
 		return nil, err

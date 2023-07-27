@@ -2,10 +2,12 @@ package core
 
 import (
 	"fmt"
-	"github.com/go-errors/errors"
 	"github.com/pskclub/mine-core/utils"
-	"github.com/streadway/amqp"
+	"github.com/sirupsen/logrus"
 	"net/http"
+
+	"github.com/go-errors/errors"
+	"github.com/streadway/amqp"
 )
 
 var MQError = Error{
@@ -18,6 +20,7 @@ type MQ struct {
 	User     string
 	Password string
 	Port     string
+	LogLevel logrus.Level
 }
 
 type MQPublishOptions struct {
@@ -87,11 +90,9 @@ func (m mq) PublishJSON(name string, data interface{}, options *MQPublishOptions
 		return err
 	}
 
-	//if NewEnv().Config().LogLevel == logrus.DebugLevel {
-	//	fmt.Printf("Publish a message at '%s' channel\n", name)
-	//}
-
-	fmt.Printf("Publish a message at '%s' channel\n", name)
+	if m.mq.LogLevel == logrus.DebugLevel {
+		fmt.Printf("Publish a message at '%s' channel\n", name)
+	}
 
 	return nil
 }
@@ -161,11 +162,9 @@ func (m mq) Consume(ctx IMQContext, name string, onConsume func(message amqp.Del
 		}()
 
 		for d := range msgs {
-			//if NewEnv().Config().LogLevel == logrus.DebugLevel {
-			//	fmt.Println(fmt.Sprintf("Received a message at '%s' channel", name))
-			//}
-
-			fmt.Println(fmt.Sprintf("Received a message at '%s' channel", name))
+			if m.mq.LogLevel == logrus.DebugLevel {
+				fmt.Println(fmt.Sprintf("Received a message at '%s' channel", name))
+			}
 
 			onConsume(d)
 		}
@@ -179,6 +178,7 @@ func NewMQ(env *ENVConfig) *MQ {
 		User:     env.MQUser,
 		Password: env.MQPassword,
 		Port:     env.MQPort,
+		LogLevel: env.LogLevel,
 	}
 }
 
