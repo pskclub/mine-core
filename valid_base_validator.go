@@ -3,14 +3,15 @@ package core
 import (
 	"encoding/json"
 	"github.com/pskclub/mine-core/utils"
-	"github.com/thedevsaddam/gojsonq/v2"
-	"gopkg.in/asaskevich/govalidator.v9"
 	"net/url"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/asaskevich/govalidator"
+	"github.com/thedevsaddam/gojsonq/v2"
 )
 
 const DateFormat = "2006-01-02 15:04:05"
@@ -44,6 +45,22 @@ func (b *BaseValidator) GetValidator() *Valid {
 
 func (b *BaseValidator) SetPrefix(prefix string) {
 	b.prefix = prefix
+}
+
+func (b *BaseValidator) isNull(val interface{}) bool {
+	if val == nil {
+		return true
+	}
+
+	return false
+}
+
+func (b *BaseValidator) isStringEmpty(val *string) bool {
+	if utils.GetString(val) == "" {
+		return true
+	}
+
+	return false
 }
 
 func (b *BaseValidator) Must(condition bool, msg *IValidMessage) bool {
@@ -105,11 +122,7 @@ func (b *BaseValidator) LoopJSONArray(j *json.RawMessage) []interface{} {
 }
 
 func (b *BaseValidator) IsStringNumber(field *string, fieldPath string) (bool, *IValidMessage) {
-	if field == nil {
-		return true, nil
-	}
-
-	if *field == "" {
+	if b.isStringEmpty(field) {
 		return true, nil
 	}
 
@@ -122,11 +135,7 @@ func (b *BaseValidator) IsStringNumber(field *string, fieldPath string) (bool, *
 }
 
 func (b *BaseValidator) IsStringNumberMin(field *string, min int64, fieldPath string) (bool, *IValidMessage) {
-	if field == nil {
-		return true, nil
-	}
-
-	if *field == "" {
+	if b.isStringEmpty(field) {
 		return true, nil
 	}
 
@@ -137,6 +146,84 @@ func (b *BaseValidator) IsStringNumberMin(field *string, min int64, fieldPath st
 
 	if n < min {
 		return false, NumberMinM(fieldPath, min)
+	}
+
+	return true, nil
+}
+
+func (b *BaseValidator) IsStringContain(field *string, substr string, fieldPath string) (bool, *IValidMessage) {
+	if b.isStringEmpty(field) {
+		return true, nil
+	}
+
+	valid := strings.Contains(utils.GetString(field), substr)
+	if !valid {
+		return false, StringContainM(fieldPath, substr)
+	}
+
+	return true, nil
+}
+
+func (b *BaseValidator) IsStringNotContain(field *string, substr string, fieldPath string) (bool, *IValidMessage) {
+	if b.isStringEmpty(field) {
+		return true, nil
+	}
+
+	valid := strings.Contains(utils.GetString(field), substr)
+	if valid {
+		return false, StringNotContainM(fieldPath, substr)
+	}
+
+	return true, nil
+}
+
+func (b *BaseValidator) IsStringStartWith(field *string, substr string, fieldPath string) (bool, *IValidMessage) {
+	if b.isStringEmpty(field) {
+		return true, nil
+	}
+
+	valid := strings.HasPrefix(utils.GetString(field), substr)
+	if !valid {
+		return false, StringStartWithM(fieldPath, substr)
+	}
+
+	return true, nil
+}
+
+func (b *BaseValidator) IsStringEndWith(field *string, substr string, fieldPath string) (bool, *IValidMessage) {
+	if b.isStringEmpty(field) {
+		return true, nil
+	}
+
+	valid := strings.HasSuffix(utils.GetString(field), substr)
+	if !valid {
+		return false, StringEndWithM(fieldPath, substr)
+	}
+
+	return true, nil
+}
+
+func (b *BaseValidator) IsStringLowercase(field *string, fieldPath string) (bool, *IValidMessage) {
+	if b.isStringEmpty(field) {
+		return true, nil
+	}
+
+	valid := govalidator.IsLowerCase(utils.GetString(field))
+	if !valid {
+		return false, StringLowercaseM(fieldPath)
+	}
+
+	return true, nil
+}
+
+func (b *BaseValidator) IsStringUppercase(field *string, fieldPath string) (bool, *IValidMessage) {
+	if b.isStringEmpty(field) {
+		return true, nil
+	}
+
+	valid := govalidator.IsUpperCase(utils.GetString(field))
+	if !valid {
+		return false, StringUppercaseM(fieldPath)
 	}
 
 	return true, nil
@@ -215,11 +302,7 @@ func (b *BaseValidator) IsNumberMax(field *int64, max int64, fieldPath string) (
 }
 
 func (b *BaseValidator) IsStrRequired(field *string, fieldPath string) (bool, *IValidMessage) {
-	if field == nil {
-		return false, RequiredM(fieldPath)
-	}
-
-	if *field == "" {
+	if b.isStringEmpty(field) {
 		return false, RequiredM(fieldPath)
 	}
 
@@ -235,12 +318,8 @@ func (b *BaseValidator) IsTimeRequired(field *time.Time, fieldPath string) (bool
 }
 
 func (b *BaseValidator) IsBase64(field *string, fieldPath string) (bool, *IValidMessage) {
-	if field == nil {
+	if b.isStringEmpty(field) {
 		return true, nil
-	}
-
-	if *field == "" {
-		return false, Base64M(fieldPath)
 	}
 
 	if !govalidator.IsBase64(*field) {
@@ -353,11 +432,7 @@ func (b *BaseValidator) IsMongoExistsWithCondition(
 }
 
 func (b *BaseValidator) IsExists(ctx IContext, field *string, table string, column string, fieldPath string) (bool, *IValidMessage) {
-	if field == nil {
-		return true, nil
-	}
-
-	if *field == "" {
+	if b.isStringEmpty(field) {
 		return true, nil
 	}
 
@@ -383,7 +458,7 @@ func (b *BaseValidator) IsJSONRequired(field *json.RawMessage, fieldPath string)
 
 func (b *BaseValidator) IsJSONObject(field *json.RawMessage, fieldPath string) (bool, *IValidMessage) {
 	if field == nil {
-		return true, JSONM(fieldPath)
+		return true, nil
 	}
 
 	var js map[string]interface{}
@@ -392,7 +467,7 @@ func (b *BaseValidator) IsJSONObject(field *json.RawMessage, fieldPath string) (
 
 func (b *BaseValidator) IsJSONObjectNotEmpty(field *json.RawMessage, fieldPath string) (bool, *IValidMessage) {
 	if field == nil {
-		return true, JSONObjectEmptyM(fieldPath)
+		return true, nil
 	}
 
 	var js map[string]interface{}
@@ -558,12 +633,12 @@ func (b *BaseValidator) IsDateTime(input *string, fieldPath string) (bool, *IVal
 }
 
 func (b *BaseValidator) IsDateTimeAfter(input *string, after *string, fieldPath string) (bool, *IValidMessage) {
-	checkAfter := func(after, check time.Time) bool {
-		return check.After(after)
-	}
-
 	if input == nil {
 		return true, nil
+	}
+
+	checkAfter := func(after, check time.Time) bool {
+		return check.After(after)
 	}
 
 	timeInput, ok := time.Parse(DateFormat, utils.GetString(input))
@@ -584,12 +659,12 @@ func (b *BaseValidator) IsDateTimeAfter(input *string, after *string, fieldPath 
 }
 
 func (b *BaseValidator) IsDateTimeBefore(input *string, before *string, fieldPath string) (bool, *IValidMessage) {
-	checkBefore := func(before, check time.Time) bool {
-		return check.Before(before)
-	}
-
 	if input == nil {
 		return true, nil
+	}
+
+	checkBefore := func(before, check time.Time) bool {
+		return check.Before(before)
 	}
 
 	timeInput, ok := time.Parse(DateFormat, utils.GetString(input))
@@ -610,12 +685,12 @@ func (b *BaseValidator) IsDateTimeBefore(input *string, before *string, fieldPat
 }
 
 func (b *BaseValidator) IsTimeAfter(input *string, after *string, fieldPath string) (bool, *IValidMessage) {
-	checkAfter := func(after, check time.Time) bool {
-		return check.After(after)
-	}
-
 	if input == nil {
 		return true, nil
+	}
+
+	checkAfter := func(after, check time.Time) bool {
+		return check.After(after)
 	}
 
 	timeInput, ok := time.Parse(TimeFormat, utils.GetString(input))
@@ -637,12 +712,12 @@ func (b *BaseValidator) IsTimeAfter(input *string, after *string, fieldPath stri
 }
 
 func (b *BaseValidator) IsTimeBefore(input *string, before *string, fieldPath string) (bool, *IValidMessage) {
-	checkBefore := func(before, check time.Time) bool {
-		return check.Before(before)
-	}
-
 	if input == nil {
 		return true, nil
+	}
+
+	checkBefore := func(before, check time.Time) bool {
+		return check.Before(before)
 	}
 
 	timeInput, ok := time.Parse(TimeFormat, utils.GetString(input))
@@ -692,7 +767,7 @@ func (b *BaseValidator) IsStrMax(input *string, size int, fieldPath string) (boo
 		return true, nil
 	}
 
-	if len(*input) > size {
+	if len([]rune(*input)) > size {
 		return false, StrMaxM(fieldPath, size)
 	}
 
@@ -704,7 +779,7 @@ func (b *BaseValidator) IsStrMin(input *string, size int, fieldPath string) (boo
 		return true, nil
 	}
 
-	if len(*input) < size {
+	if len([]rune(*input)) < size {
 		return false, StrMinM(fieldPath, size)
 	}
 
@@ -780,11 +855,7 @@ func (b *BaseValidator) IsArrayBetween(array interface{}, min int, max int, fiel
 }
 
 func (b *BaseValidator) IsURL(field *string, fieldPath string) (bool, *IValidMessage) {
-	if field == nil {
-		return true, nil
-	}
-
-	if *field == "" {
+	if b.isStringEmpty(field) {
 		return true, nil
 	}
 
@@ -796,11 +867,7 @@ func (b *BaseValidator) IsURL(field *string, fieldPath string) (bool, *IValidMes
 }
 
 func (b *BaseValidator) IsIP(field *string, fieldPath string) (bool, *IValidMessage) {
-	if field == nil {
-		return true, nil
-	}
-
-	if *field == "" {
+	if b.isStringEmpty(field) {
 		return true, nil
 	}
 
@@ -812,12 +879,10 @@ func (b *BaseValidator) IsIP(field *string, fieldPath string) (bool, *IValidMess
 }
 
 func (b *BaseValidator) IsEmail(field *string, fieldPath string) (bool, *IValidMessage) {
-	if field == nil {
+	if b.isStringEmpty(field) {
 		return true, nil
 	}
-	if *field == "" {
-		return true, nil
-	}
+
 	if !govalidator.IsEmail(*field) {
 		return false, EmailM(fieldPath)
 	}
@@ -862,4 +927,8 @@ func (b *BaseValidator) IsBoolRequired(value interface{}, fieldPath string) (boo
 
 	_, ok := value.(*bool)
 	return ok, BooleanM(fieldPath)
+}
+
+func (b *BaseValidator) IsCustom(customFunc func() (bool, *IValidMessage)) (bool, *IValidMessage) {
+	return customFunc()
 }

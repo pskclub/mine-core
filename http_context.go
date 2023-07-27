@@ -189,11 +189,15 @@ func (c *HTTPContext) BindOnly(i interface{}) IError {
 
 func (c *HTTPContext) Log() ILogger {
 	if c.logger == nil {
-		c.logger = NewHTTPLogger(c)
+		c.logger = NewLogger(c)
 	}
 	return c.logger.(ILogger)
 }
 
 func (c HTTPContext) GetUserAgent() *user_agent.UserAgent {
 	return user_agent.New(c.Request().UserAgent())
+}
+
+func (c *HTTPContext) NewError(err error, errorType IError, args ...interface{}) IError {
+	return newError(c, err, errorType, args...)
 }

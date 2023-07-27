@@ -2,7 +2,7 @@ package utils
 
 import (
 	"errors"
-	"gopkg.in/asaskevich/govalidator.v9"
+	"github.com/asaskevich/govalidator"
 	"gorm.io/gorm"
 	"strings"
 )
