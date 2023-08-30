@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/pskclub/mine-core/consts"
 	"github.com/pskclub/mine-core/utils"
 	"io/ioutil"
 
@@ -11,6 +12,11 @@ import (
 )
 
 func CaptureError(ctx IContext, level sentry.Level, err error, args ...interface{}) {
+	if ctx.Type() == consts.HTTP {
+		CaptureHTTPError(ctx.(IHTTPContext), level, err, args...)
+		return
+	}
+
 	sentry.ConfigureScope(func(scope *sentry.Scope) {
 		scope.SetRequest(nil)
 		valueMap, _ := utils.StructToMap(ctx.ENV().All())
