@@ -45,6 +45,7 @@ type ENVConfig struct {
 	DBMongoPassword string `mapstructure:"db_mongo_password"`
 	DBMongoPort     string `mapstructure:"db_mongo_port"`
 
+	MQURI      string `mapstructure:"mq_uri"`
 	MQHost     string `mapstructure:"mq_host"`
 	MQUser     string `mapstructure:"mq_user"`
 	MQPassword string `mapstructure:"mq_password"`
@@ -87,7 +88,7 @@ func NewENVPath(path string) IENV {
 		"SENTRY_DSN", "DB_DRIVER", "DB_HOST", "DB_HOST",
 		"DB_NAME", "DB_USER", "DB_PASSWORD", "DB_PORT", "DB_MONGO_HOST",
 		"DB_MONGO_NAME", "DB_MONGO_USERNAME", "DB_MONGO_PASSWORD", "DB_MONGO_PORT",
-		"MQ_HOST", "MQ_USER", "MQ_PASSWORD", "MQ_PORT", "S3_ENDPOINT",
+		"MQ_URI", "MQ_HOST", "MQ_USER", "MQ_PASSWORD", "MQ_PORT", "S3_ENDPOINT",
 		"S3_ACCESS_KEY", "S3_SECRET_KEY", "S3_BUCKET", "S3_HTTPS", "S3_REGION",
 		"CACHE_PORT", "CACHE_HOST", "ELS_ADDRESS", "ELS_USER", "ELS_PASSWORD",
 	}
