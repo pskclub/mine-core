@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-errors/errors"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 var MQError = Error{
@@ -16,6 +16,7 @@ var MQError = Error{
 	Message: "mq internal error"}
 
 type MQ struct {
+	URI      string
 	Host     string
 	User     string
 	Password string
@@ -174,6 +175,7 @@ func (m mq) Consume(ctx IMQContext, name string, onConsume func(message amqp.Del
 
 func NewMQ(env *ENVConfig) *MQ {
 	return &MQ{
+		URI:      env.MQURI,
 		Host:     env.MQHost,
 		User:     env.MQUser,
 		Password: env.MQPassword,
@@ -184,10 +186,14 @@ func NewMQ(env *ENVConfig) *MQ {
 
 // ConnectDB to connect Database
 func (m *MQ) Connect() (IMQ, error) {
-	dsn := fmt.Sprintf("amqp://%s:%s@%s:%s/",
-		m.User, m.Password, m.Host, m.Port,
-	)
-
+	var dsn string
+	if m.URI != "" {
+		dsn = m.URI
+	} else {
+		dsn = fmt.Sprintf("amqp://%s:%s@%s:%s/",
+			m.User, m.Password, m.Host, m.Port,
+		)
+	}
 	conn, err := amqp.Dial(dsn)
 	if err != nil {
 		return nil, err
@@ -198,9 +204,14 @@ func (m *MQ) Connect() (IMQ, error) {
 
 // ConnectDB to connect Database
 func (m *MQ) ReConnect() (*amqp.Connection, error) {
-	dsn := fmt.Sprintf("amqp://%s:%s@%s:%s/",
-		m.User, m.Password, m.Host, m.Port,
-	)
+	var dsn string
+	if m.URI != "" {
+		dsn = m.URI
+	} else {
+		dsn = fmt.Sprintf("amqp://%s:%s@%s:%s/",
+			m.User, m.Password, m.Host, m.Port,
+		)
+	}
 
 	conn, err := amqp.Dial(dsn)
 	if err != nil {

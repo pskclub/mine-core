@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 	"github.com/pskclub/mine-core/consts"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type IMQContext interface {
