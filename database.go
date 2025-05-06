@@ -43,6 +43,7 @@ type KeywordOptions struct {
 
 type Database struct {
 	Driver   string
+	DSN      string
 	Name     string
 	Host     string
 	User     string
@@ -54,6 +55,7 @@ type Database struct {
 func NewDatabase(env *ENVConfig) *Database {
 	return &Database{
 		Driver:   env.DBDriver,
+		DSN:      env.DBDsn,
 		Name:     env.DBName,
 		Host:     env.DBHost,
 		User:     env.DBUser,
@@ -66,6 +68,7 @@ func NewDatabase(env *ENVConfig) *Database {
 func NewDatabaseWithConfig(env *ENVConfig, config *gorm.Config) *Database {
 	return &Database{
 		Driver:   env.DBDriver,
+		DSN:      env.DBDsn,
 		Name:     env.DBName,
 		Host:     env.DBHost,
 		User:     env.DBUser,
@@ -86,7 +89,7 @@ func (db *Database) Connect() (*gorm.DB, error) {
 		logLevel = logger.Error
 	}
 
-	var dsn string
+	dsn := db.DSN
 	var newDB *gorm.DB
 	var err error
 
@@ -94,18 +97,24 @@ func (db *Database) Connect() (*gorm.DB, error) {
 
 	switch db.Driver {
 	case DatabaseDriverMSSQL:
-		dsn = fmt.Sprintf("sqlserver://%v:%v@%v:%v?database=%v",
-			db.User, db.Password, db.Host, db.Port, db.Name,
-		)
+		if len(dsn) == 0 {
+			dsn = fmt.Sprintf("sqlserver://%v:%v@%v:%v?database=%v",
+				db.User, db.Password, db.Host, db.Port, db.Name,
+			)
+		}
 		newDB, err = gorm.Open(sqlserver.Open(dsn), db.config)
 	case DatabaseDriverPOSTGRES:
-		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=utc",
-			db.Host, db.User, db.Password, db.Name, db.Port)
+		if len(dsn) == 0 {
+			dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=utc",
+				db.Host, db.User, db.Password, db.Name, db.Port)
+		}
 		newDB, err = gorm.Open(postgres.Open(dsn), db.config)
 	default:
-		dsn = fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?charset=utf8&parseTime=True&loc=Local&multiStatements=True&loc=UTC",
-			db.User, db.Password, db.Host, db.Port, db.Name,
-		)
+		if len(dsn) == 0 {
+			dsn = fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?charset=utf8&parseTime=True&loc=Local&multiStatements=True&loc=UTC",
+				db.User, db.Password, db.Host, db.Port, db.Name,
+			)
+		}
 		newDB, err = gorm.Open(mysql.Open(dsn), db.config)
 	}
 

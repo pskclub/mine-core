@@ -33,6 +33,7 @@ type ENVConfig struct {
 	SentryDSN string `mapstructure:"sentry_dsn"`
 
 	DBDriver   string `mapstructure:"db_driver"`
+	DBDsn      string `mapstructure:"db_dsn"`
 	DBHost     string `mapstructure:"db_host"`
 	DBName     string `mapstructure:"db_name"`
 	DBUser     string `mapstructure:"db_user"`
@@ -85,7 +86,7 @@ func NewENVPath(path string) IENV {
 	envKeys := []string{
 		"LOG_HOST",
 		"HOST", "ENV", "SERVICE",
-		"SENTRY_DSN", "DB_DRIVER", "DB_HOST", "DB_HOST",
+		"SENTRY_DSN", "DB_DRIVER", "DB_DSN", "DB_HOST", "DB_HOST",
 		"DB_NAME", "DB_USER", "DB_PASSWORD", "DB_PORT", "DB_MONGO_HOST",
 		"DB_MONGO_NAME", "DB_MONGO_USERNAME", "DB_MONGO_PASSWORD", "DB_MONGO_PORT",
 		"MQ_URI", "MQ_HOST", "MQ_USER", "MQ_PASSWORD", "MQ_PORT", "S3_ENDPOINT",
