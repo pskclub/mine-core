@@ -4,7 +4,7 @@ mine-core ไม่ได้บังคับโครงโปรเจกต�
 และผ่านการใช้งานมาแล้วคือแบบนี้ หน้านี้อธิบายว่ามันเป็นยังไงและ**ทำไม** เพื่อให้
 service ใหม่ไม่ต้องออกแบบเองตั้งแต่ต้น
 
-ตัวเป็นๆ อยู่ที่ golang-template (internal) —
+ตัวเป็นๆ อยู่ที่ [mine-core-template](https://github.com/pskclub/mine-core-template) —
 clone แล้วเริ่มจากตรงนั้นได้เลย
 
 ## Group by feature, not by layer
@@ -296,11 +296,11 @@ generated file ให้ด้วย และดูเฉพาะ import ท�
 import พี่น้องได้ (มันประกอบของจริงเหมือน `cmd.Modules`) และนั่นไม่ใช่ dependency
 ของ binary ที่ ship
 
-ไฟล์เต็ม: `arch/arch_test.go` (golang-template, internal)
+ไฟล์เต็ม: [arch/arch_test.go](https://github.com/pskclub/mine-core-template/blob/main/arch/arch_test.go)
 
 ## เพิ่ม module ใหม่
 
-`golang-template` มี generator ให้:
+[mine-core-template](https://github.com/pskclub/mine-core-template) มี generator ให้:
 
 ```sh
 make new-module name=order

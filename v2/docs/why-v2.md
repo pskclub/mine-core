@@ -251,7 +251,7 @@ go get github.com/pskclub/mine-core/v2
 - [Getting Started](./getting-started.md) — wiring + controller เต็มตัวอย่าง
 - [Project Structure](./structure.md) — service จริงวางไฟล์ยังไงเมื่อมันโตขึ้น
 - [API + Cron ในตัวเดียว](./api-with-cron.md) — service ที่มีทั้ง API และ scheduled job
-- อยากได้โครงที่ประกอบไว้แล้ว → golang-template (internal)
+- อยากได้โครงที่ประกอบไว้แล้ว → [mine-core-template](https://github.com/pskclub/mine-core-template)
 
 ---
 

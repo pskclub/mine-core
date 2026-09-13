@@ -93,7 +93,7 @@ if count >= maxNotesPerUser {
 ### Error — เฉพาะสิ่งที่ไม่มีใครอื่นรายงาน
 
 ถ้า error ถูก `return` ออกไป แปลว่ามีคนรายงานแล้ว (framework + Sentry) `Error`
-จึงเหลือไว้สำหรับความผิดพลาดเชิงโครงสร้างที่ไม่มีใครเห็น — ใน golang-template
+จึงเหลือไว้สำหรับความผิดพลาดเชิงโครงสร้างที่ไม่มีใครเห็น — ใน [mine-core-template](https://github.com/pskclub/mine-core-template)
 มีอยู่ **สองที่**เท่านั้น: route ที่ลงทะเบียนโดยไม่มี middleware ของมัน และ
 `RegisterAuth` ที่ไม่เคยถูกเรียก
 
