@@ -37,6 +37,14 @@ core.StartHTTPServer(e, env)
 The full walkthrough, with a validated controller, is in
 [Getting started](./v2/docs/getting-started.md).
 
+Starting a new service? **[mine-core-template](https://github.com/pskclub/mine-core-template)**
+is a complete one to copy — modules, api/worker roles, Prisma migrations, tests and
+CI — ready for `gonew`:
+
+```sh
+go run golang.org/x/tools/cmd/gonew@latest github.com/pskclub/mine-core-template github.com/acme/orders
+```
+
 ## What's inside
 
 | Capability | Built on |

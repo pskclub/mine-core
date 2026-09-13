@@ -27,7 +27,7 @@ prisma/schema/migrations/       ← SQL ที่ commit ไว้ รันจ�
 models/*.go                     ← struct + tag ที่ "อธิบาย" ตารางที่มีอยู่แล้ว
 ```
 
-golang-template (internal) ใช้ **Prisma**
+[mine-core-template](https://github.com/pskclub/mine-core-template) ใช้ **Prisma**
 (`prisma migrate`) แต่หลักการเดียวกันใช้ได้กับ [golang-migrate](https://github.com/golang-migrate/migrate),
 [goose](https://github.com/pressly/goose), [atlas](https://atlasgo.io) หรือ
 [dbmate](https://github.com/amacneil/dbmate) — สิ่งที่ framework สนใจมีข้อเดียว:
