@@ -1,0 +1,4 @@
+# The golden collection is generated with LF and compared against what the
+# generator produces, which is also LF. A checkout that rewrites it to CRLF
+# would leave the fixture disagreeing with the tool on every line.
+testdata/collection.golden.json text eol=lf

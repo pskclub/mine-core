@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>devtools</title>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f7f7f8; --border: #e3e3e6; --fg: #1c1c1e;
+    --muted: #6b6b70; --accent: #2563eb; --ok: #16a34a; --warn: #d97706;
+    --bad: #dc2626; --code: #f0f0f2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #131316; --panel: #1a1a1e; --border: #2c2c32; --fg: #e6e6e9;
+      --muted: #8d8d95; --accent: #60a5fa; --ok: #4ade80; --warn: #fbbf24;
+      --bad: #f87171; --code: #0e0e11;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 13px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--panel);
+    position: sticky; top: 0; z-index: 5;
+  }
+  h1 { font-size: 14px; margin: 0; font-weight: 600; letter-spacing: .2px; }
+  .grow { flex: 1; }
+  .badge {
+    font-size: 11px; padding: 2px 7px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--muted); background: var(--bg);
+  }
+  .badge.env { color: var(--accent); border-color: var(--accent); }
+  .badge.warn { color: var(--warn); border-color: var(--warn); }
+  nav { display: flex; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  nav button {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); padding: 9px 12px; cursor: pointer; font: inherit; white-space: nowrap;
+  }
+  nav button:hover { color: var(--fg); }
+  nav button.on { color: var(--fg); border-bottom-color: var(--accent); }
+  main { padding: 16px; }
+  section { display: none; }
+  section.on { display: block; }
+  .cards { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  .card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--panel); }
+  .card .k { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+  .card .v { font-size: 15px; margin-top: 2px; word-break: break-word; }
+  .card .sub { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .card .sub.warn { color: var(--warn); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .dot.on { background: var(--ok); } .dot.off { background: var(--muted); } .dot.bad { background: var(--bad); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; position: sticky; top: 0; background: var(--bg); }
+  tbody tr:hover { background: var(--panel); }
+  tr.clickable { cursor: pointer; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background: var(--code); border: 1px solid var(--border); border-radius: 6px; padding: 10px; overflow: auto; max-height: 320px; font-size: 12px; }
+  /* every text-bearing input, not just the toolbar's: the parameter form is
+     built from the job's schema, so it uses whichever of these the kind asks
+     for, and an unstyled one is white-on-white under a dark scheme */
+  input[type=search], input[type=text], input[type=number], input[type=date],
+  input[type=time], input[type=datetime-local], select, textarea {
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 8px; font: inherit;
+  }
+  textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  input:invalid, textarea:invalid { border-color: var(--bad); }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  button.act {
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 10px; font: inherit; cursor: pointer;
+  }
+  button.act:hover { border-color: var(--accent); color: var(--accent); }
+  .m { color: var(--muted); }
+  .method { font-weight: 600; font-size: 11px; }
+  .GET { color: var(--ok); } .POST { color: var(--accent); }
+  .PUT, .PATCH { color: var(--warn); } .DELETE { color: var(--bad); }
+  .st { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); }
+  .st.running, .st.queued { color: var(--accent); border-color: var(--accent); }
+  .st.succeeded { color: var(--ok); border-color: var(--ok); }
+  .st.failed { color: var(--bad); border-color: var(--bad); }
+  .st.canceled, .st.skipped { color: var(--muted); }
+  .err { color: var(--bad); }
+  dialog {
+    border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
+    color: var(--fg); max-width: min(900px, 92vw); width: 900px; padding: 0;
+  }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  .dlg-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .dlg-body { padding: 14px; max-height: 70vh; overflow: auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>devtools</h1>
+  <span class="badge" id="service">—</span>
+  <span class="badge env" id="env">—</span>
+  <span class="badge" id="uptime">—</span>
+  <span class="badge warn" id="unprotected" hidden>no auth — dev only</span>
+  <span class="badge" id="mode">read-only</span>
+  <span class="grow"></span>
+  <span class="m" id="err"></span>
+  <button class="act" id="refresh">refresh</button>
+</header>
+
+<nav id="tabs">
+  <button data-tab="overview" class="on">overview</button>
+  <button data-tab="routes">routes</button>
+  <button data-tab="modules" hidden>modules</button>
+  <button data-tab="config">config</button>
+  <button data-tab="jobs">jobs</button>
+  <button data-tab="trace">trace</button>
+  <button data-tab="health">health</button>
+</nav>
+
+<main>
+  <section id="overview" class="on">
+    <div class="cards" id="runtime-cards"></div>
+    <div id="pprof-panel"></div>
+    <h3>capabilities</h3>
+    <div class="cards" id="cap-cards"></div>
+  </section>
+
+  <section id="routes">
+    <div class="toolbar">
+      <input type="search" id="route-filter" placeholder="filter path or handler" size="34">
+      <span class="m" id="route-count"></span>
+    </div>
+    <table><thead><tr><th style="width:70px">method</th><th>path</th><th>handler</th></tr></thead>
+    <tbody id="route-rows"></tbody></table>
+  </section>
+
+  <section id="modules">
+    <div class="toolbar"><span class="m" id="module-count"></span></div>
+    <div class="cards" id="module-cards"></div>
+  </section>
+
+  <section id="config">
+    <div class="toolbar">
+      <input type="search" id="config-filter" placeholder="filter key" size="34">
+      <label class="m"><input type="checkbox" id="config-set-only"> only keys that are set</label>
+      <span class="m" id="config-count"></span>
+    </div>
+    <table><thead><tr><th style="width:34%">key</th><th>value</th></tr></thead>
+    <tbody id="config-rows"></tbody></table>
+  </section>
+
+  <section id="jobs">
+    <div id="jobs-note" class="m"></div>
+    <h3>registered</h3>
+    <table><thead><tr><th>name</th><th>schedule</th><th>next run</th><th>queue</th><th>concurrency</th><th>attempts</th><th>params</th><th style="width:1%"></th></tr></thead>
+    <tbody id="job-rows"></tbody></table>
+    <h3>runs</h3>
+    <div class="toolbar">
+      <select id="run-job"><option value="">every job</option></select>
+      <select id="run-status">
+        <option value="">every status</option>
+        <option>queued</option><option>running</option><option>succeeded</option>
+        <option>failed</option><option>canceled</option><option>skipped</option>
+      </select>
+      <button class="act" id="run-reload">reload</button>
+      <span class="m" id="run-count"></span>
+    </div>
+    <table><thead><tr><th>id</th><th>job</th><th>status</th><th>trigger</th><th>attempt</th><th>started</th><th>duration</th></tr></thead>
+    <tbody id="run-rows"></tbody></table>
+  </section>
+
+  <section id="trace">
+    <div class="toolbar">
+      <input type="search" id="trace-filter" placeholder="filter path or handler" size="30">
+      <button class="act" id="trace-reload">reload</button>
+      <button class="act" id="trace-clear">clear buffer</button>
+      <span class="m" id="trace-count"></span>
+    </div>
+    <div id="trace-note" class="m"></div>
+    <table><thead><tr><th>when</th><th style="width:60px">method</th><th>path</th><th>handler</th><th>status</th><th>took</th><th>events</th></tr></thead>
+    <tbody id="trace-rows"></tbody></table>
+  </section>
+
+  <section id="health">
+    <div class="toolbar">
+      <button class="act" id="health-run">run probe</button>
+      <span class="m">a probe opens a connection to every dependency — it is not run on load</span>
+    </div>
+    <div id="health-out"></div>
+  </section>
+</main>
+
+<dialog id="run-dialog">
+  <div class="dlg-head">
+    <strong id="run-title" class="mono">run</strong>
+    <span class="grow"></span>
+    <span id="run-actions"></span>
+    <button class="act" onclick="document.getElementById('run-dialog').close()">close</button>
+  </div>
+  <div class="dlg-body" id="run-detail"></div>
+</dialog>
+
+<dialog id="trigger-dialog">
+  <div class="dlg-head">
+    <strong id="trigger-title" class="mono">run job</strong>
+    <span class="grow"></span>
+    <button class="act" onclick="document.getElementById('trigger-dialog').close()">close</button>
+  </div>
+  <div class="dlg-body">
+    <form id="trigger-form" onsubmit="return false">
+      <div id="trigger-fields"></div>
+      <!-- the escape hatch: a job may take parameters without publishing a
+           schema for them (core.Register rather than core.RegisterJob), and a
+           form built from nothing would otherwise say it takes none -->
+      <details id="trigger-raw-box" style="margin-top:10px">
+        <summary class="m" style="cursor:pointer">raw JSON</summary>
+        <div class="m" id="trigger-raw-note" style="margin:6px 0"></div>
+        <textarea id="trigger-raw" rows="6" style="width:100%" spellcheck="false"
+          placeholder='{"date": "2026-07-01"}'></textarea>
+      </details>
+      <hr style="border:0;border-top:1px solid var(--border);margin:14px 0">
+      <label class="m" style="display:block;margin-bottom:6px">
+        <input type="checkbox" id="trigger-logs" checked> keep every log line of this run
+      </label>
+      <label class="m" style="display:block;margin-bottom:12px" id="trigger-idem-row">idempotency key
+        <input type="search" id="trigger-idem" size="30" placeholder="optional — a second click with the same key returns the first run">
+      </label>
+      <button class="act" id="trigger-submit">run now</button>
+      <span class="err" id="trigger-error"></span>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="trace-dialog">
+  <div class="dlg-head">
+    <strong id="trace-title" class="mono">request</strong>
+    <span class="grow"></span>
+    <button class="act" onclick="document.getElementById('trace-dialog').close()">close</button>
+  </div>
+  <div class="dlg-body" id="trace-detail"></div>
+</dialog>
+
+<script>
+"use strict";
+const BASE = "{{base}}";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function api(path, init) {
+  const res = await fetch(BASE + "/api" + path, {
+    ...init,
+    headers: { Accept: "application/json", "Content-Type": "application/json", ...(init || {}).headers },
+  });
+  if (res.status === 204) return null;
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.message || body.code || res.status + " " + res.statusText);
+  return body;
+}
+const post = (path, body) =>
+  api(path, { method: "POST", body: JSON.stringify(body || {}) });
+
+// writable mirrors the mount's AllowWrite: the action buttons are not rendered
+// at all when it is off, rather than rendered and answering 403 on click.
+let writable = false;
+
+function fail(err) { $("err").textContent = String(err.message || err); }
+function clearFail() { $("err").textContent = ""; }
+
+// --- tabs ---
+let current = "overview";
+$("tabs").addEventListener("click", (e) => {
+  const tab = e.target.dataset && e.target.dataset.tab;
+  if (!tab) return;
+  current = tab;
+  for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === tab);
+  for (const s of document.querySelectorAll("main section")) s.classList.toggle("on", s.id === tab);
+  load(tab);
+});
+
+// --- overview ---
+async function loadOverview() {
+  const o = await api("/overview");
+  $("service").textContent = o.service || "(unnamed service)";
+  $("env").textContent = o.env || "?";
+  $("uptime").textContent = "up " + duration(o.uptime_s * 1000);
+  $("unprotected").hidden = o.protected;
+  writable = o.writable;
+  $("mode").textContent = o.writable ? "actions enabled" : "read-only";
+  $("mode").classList.toggle("warn", o.writable);
+  const r = o.runtime;
+  $("runtime-cards").innerHTML = [
+    card("go", r.go, r.os + "/" + r.arch),
+    card("goroutines", r.goroutines, "GOMAXPROCS " + r.gomaxprocs + " of " + r.num_cpu + " cpu"),
+    card("heap", r.heap_mb + " MB", "sys " + r.sys_mb + " MB · gc " + r.gc_count),
+    card("routes", o.routes, "jobs registered " + o.jobs.registered +
+      (o.jobs.queued >= 0 ? " · queued " + o.jobs.queued : "")),
+  ].join("");
+  // hidden rather than empty: a mount that was not given the set cannot tell
+  // "no modules" from "nobody passed them", and must not claim the first
+  document.querySelector('#tabs button[data-tab="modules"]').hidden = o.modules < 0;
+  $("pprof-panel").innerHTML = !o.profiling ? "" : await pprofLinks();
+  $("cap-cards").innerHTML = o.capabilities.map((c) => {
+    const title = c.kind + (c.name && c.name !== "default" ? " · " + c.name : "");
+    const sub = [c.detail, c.stats ? statsLine(c.stats) : ""].filter(Boolean).join(" · ");
+    return `<div class="card"><div class="k">${esc(title)}</div>
+      <div class="v"><span class="dot ${c.enabled ? "on" : "off"}"></span>${c.enabled ? "wired" : "disabled"}</div>
+      <div class="sub">${esc(sub)}</div></div>`;
+  }).join("");
+  return o;
+}
+// pprofLinks is a plain list of links: the profiles are files to download and
+// open in `go tool pprof`, not something this page can render.
+async function pprofLinks() {
+  const p = await api("/pprof");
+  return `<h3>profiling</h3>
+    <p class="m">${esc(p.note)} — <code>go tool pprof ${esc(location.origin + p.base)}/heap</code></p>
+    <div class="cards">${p.profiles.map((prof) => `<div class="card">
+      <div class="k"><a href="${esc(p.base)}/${esc(prof.name)}?debug=1">${esc(prof.name)}</a></div>
+      <div class="sub">${esc(prof.desc)}</div></div>`).join("")}
+      <div class="card"><div class="k"><a href="${esc(p.base)}/profile?seconds=10">cpu (10s)</a></div>
+      <div class="sub">a CPU profile of the next ten seconds</div></div>
+    </div>`;
+}
+
+const card = (k, v, sub) =>
+  `<div class="card"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="sub">${esc(sub || "")}</div></div>`;
+const statsLine = (s) => `pool ${s.in_use}/${s.open} in use, ${s.idle} idle, max ${s.max_open}`;
+
+// --- routes ---
+let routes = [];
+async function loadRoutes() {
+  routes = (await api("/routes")).items || [];
+  renderRoutes();
+}
+function renderRoutes() {
+  const q = $("route-filter").value.toLowerCase();
+  const rows = routes.filter((r) => !q || r.path.toLowerCase().includes(q) ||
+    (r.handler || "").toLowerCase().includes(q));
+  $("route-count").textContent = rows.length + " of " + routes.length;
+  $("route-rows").innerHTML = rows.map((r) =>
+    `<tr><td class="method ${esc(r.method)}">${esc(r.method)}</td>
+      <td class="mono">${esc(r.path)}</td>
+      <td class="mono m">${esc(r.handler || "—")}</td></tr>`).join("");
+}
+$("route-filter").addEventListener("input", renderRoutes);
+
+// --- modules ---
+// each module is a card listing what it actually attached, read against what it
+// declares. The two together are the point of the panel: an empty list means
+// "has none" for a module that declares none and "this role never mounted them"
+// for one that does, and only the second is a finding.
+//
+// Each entry is [what the report calls it, what the module interface is called].
+const MODULE_KINDS = [
+  ["routes", "routes"], ["jobs", "jobs"], ["cron", "cron"],
+  ["queues", "consumers"], ["health", "health"],
+];
+
+async function loadModules() {
+  const items = (await api("/modules")).items || [];
+  $("module-count").textContent = items.length + (items.length === 1 ? " module" : " modules");
+  $("module-cards").innerHTML = items.map((m) => {
+    const declares = m.declares || [];
+    const rows = MODULE_KINDS.map(([key, declared]) => {
+      const attached = m[key] || [];
+      if (attached.length) {
+        return `<div class="sub"><b>${esc(key)}</b> ` +
+          attached.map((x) => `<code>${esc(x)}</code>`).join(" ") + `</div>`;
+      }
+      // declared and empty is the whole reason this panel exists: a worker that
+      // never mounted an api module's routes looks healthy from every other tab
+      return declares.includes(declared)
+        ? `<div class="sub warn"><b>${esc(key)}</b> declared, none attached here</div>`
+        : "";
+    }).filter(Boolean).join("");
+    const body = rows || (declares.length
+      ? ""
+      : `<div class="sub warn">declares nothing — this module attaches no routes, jobs, cron, consumers or health checks</div>`);
+    return `<div class="card"><div class="k">${esc(m.name)}</div>
+      <div class="v">${moduleState(m, declares)}</div>${body}</div>`;
+  }).join("");
+}
+
+// moduleState reports background work, and only for a module that has some.
+// Started is false both for a module whose Start failed to run and for one with
+// no Start at all, and the second is the overwhelming majority — showing them
+// alike put a grey "off" dot on every card in the panel.
+function moduleState(m, declares) {
+  if (!declares.includes("lifecycle")) {
+    return `<span class="m">no background work</span>`;
+  }
+  return `<span class="dot ${m.started ? "on" : "bad"}"></span>` +
+    (m.started ? "running" : `<span class="err">not started</span>`);
+}
+
+// --- config ---
+let config = [];
+async function loadConfig() {
+  config = (await api("/config")).items || [];
+  renderConfig();
+}
+function renderConfig() {
+  const q = $("config-filter").value.toLowerCase();
+  const setOnly = $("config-set-only").checked;
+  const rows = config.filter((e) => (!q || e.key.includes(q)) && (!setOnly || e.set));
+  $("config-count").textContent = rows.length + " of " + config.length;
+  $("config-rows").innerHTML = rows.map((e) => {
+    let v;
+    if (e.secret) v = e.set ? '<span class="m">•••••• (set)</span>' : '<span class="m">(not set)</span>';
+    else if (!e.set) v = '<span class="m">(empty)</span>';
+    else v = esc(e.value);
+    return `<tr><td class="mono">${esc(e.key)}</td><td class="mono">${v}</td></tr>`;
+  }).join("");
+}
+$("config-filter").addEventListener("input", renderConfig);
+$("config-set-only").addEventListener("change", renderConfig);
+
+// --- jobs ---
+let jobsByName = {};
+async function loadJobs() {
+  const o = await api("/overview");
+  const note = [];
+  if (!o.jobs.registry) note.push("no registry was passed to devtools.Mount — the job list is empty for that reason, not because the service has none");
+  if (!o.jobs.store) note.push("no store was passed — runs cannot be listed");
+  if (o.jobs.registry && !o.writable) note.push("read-only mount: set Options.AllowWrite and pass Options.Runner to trigger, cancel and replay from here");
+  $("jobs-note").textContent = note.join(" · ");
+
+  if (o.jobs.registry) {
+    const page = await api("/jobs");
+    const jobs = page.items || [];
+    // "nothing is armed in this process" and "this job has no schedule" look
+    // the same in an empty cell, and they are not the same thing.
+    const scheduledHere = page.scheduled;
+    if (!scheduledHere) note.push("no scheduler is running in this process — next-run times come from the process that arms the cron");
+    $("jobs-note").textContent = note.join(" · ");
+    jobsByName = Object.fromEntries(jobs.map((j) => [j.name, j]));
+    $("job-rows").innerHTML = jobs.map((j) => `<tr>
+      <td class="mono">${esc(j.name)}${j.paused ? ' <span class="st">paused</span>' : ""}
+        ${j.description ? '<div class="m">' + esc(j.description) + "</div>" : ""}</td>
+      <td class="mono">${esc(j.schedule || "manual")}</td>
+      <td class="m">${nextRunCell(j, scheduledHere)}</td>
+      <td class="mono">${esc(j.queue)}</td>
+      <td>${esc(j.concurrency)}${j.max_concurrent ? " · max " + j.max_concurrent : ""}</td>
+      <td>${esc(j.max_attempts)}</td>
+      <td class="mono m">${esc((j.params || []).map((p) => p.name + ":" + p.kind + (p.required ? "!" : "")).join(", ") || "—")}</td>
+      <td style="white-space:nowrap">${writable ? `
+        <button class="act" data-run-job="${esc(j.name)}">run</button>
+        <button class="act" data-toggle-job="${esc(j.name)}" data-paused="${j.paused ? "1" : ""}">${j.paused ? "resume" : "pause"}</button>
+      ` : ""}</td>
+    </tr>`).join("");
+    const sel = $("run-job");
+    sel.innerHTML = '<option value="">every job</option>' +
+      jobs.map((j) => `<option>${esc(j.name)}</option>`).join("");
+  }
+  if (o.jobs.store) await loadRuns();
+}
+
+// nextRunCell says why a cell is empty, which is the answer half the time.
+function nextRunCell(job, scheduledHere) {
+  if (!job.schedule) return "—";
+  if (job.next_run) return esc(new Date(job.next_run).toLocaleString()) + ' <span class="m">in ' + duration(job.in_s * 1000) + "</span>";
+  return scheduledHere
+    ? '<span class="err">not armed</span>'
+    : '<span class="m">elsewhere</span>';
+}
+
+$("job-rows").addEventListener("click", async (e) => {
+  const run = e.target.dataset.runJob;
+  const toggle = e.target.dataset.toggleJob;
+  try {
+    if (run) return openTrigger(run);
+    if (toggle) {
+      await post(`/jobs/${encodeURIComponent(toggle)}/${e.target.dataset.paused ? "resume" : "pause"}`);
+      await loadJobs();
+    }
+  } catch (err) { fail(err); }
+});
+
+// --- triggering ---
+// what the dialog is currently for. replayOf is set when it was opened from a
+// finished run, which posts elsewhere and starts with that run's parameters
+// rather than the schema's defaults.
+let trigger = { job: "", replayOf: "" };
+
+// openTrigger builds the parameter form for a job. `given` pre-fills it — the
+// parameters of the run being replayed — and falls back to each field's default.
+function openTrigger(name, opts) {
+  const o = opts || {};
+  // a run may name a job this process does not have registered; the form is
+  // still worth opening, and the server says so more precisely than a dead button
+  const job = jobsByName[name] || { name, params: [] };
+  trigger = { job: name, replayOf: o.replayOf || "" };
+
+  $("trigger-title").textContent = (o.replayOf ? "replay " : "run ") + name;
+  $("trigger-submit").textContent = o.replayOf ? "replay now" : "run now";
+  $("trigger-error").textContent = "";
+  $("trigger-idem").value = "";
+  // a replay is already a new run of its own; there is nothing to deduplicate
+  $("trigger-idem-row").hidden = !!o.replayOf;
+
+  const fields = job.params || [];
+  const plain = o.params != null && typeof o.params === "object" && !Array.isArray(o.params);
+  const given = plain ? o.params : null;
+  $("trigger-fields").innerHTML = fields.length
+    ? fields.map((p) => paramField(p, given ? given[p.name] : undefined)).join("")
+    : `<p class="m">this job publishes no parameter schema — declare
+       <code>JobDef.Params</code> or register it with <code>core.RegisterJob</code>
+       to get a form here. It may still take parameters: send them below.</p>`;
+
+  // raw JSON is the only input when there is no schema, and a rarely-needed
+  // override when there is. It also takes over whenever a form would lose
+  // something: a payload the schema does not describe, or one that is not an
+  // object at all, would come back from the fields quietly missing parts of what
+  // the original run was given, and a replay that changes the payload without
+  // being asked to is the worst thing this dialog could do.
+  const unmapped = o.params != null &&
+    (!plain || Object.keys(o.params).some((k) => !fields.some((f) => f.name === k)));
+  $("trigger-raw-box").open = unmapped || !fields.length;
+  $("trigger-raw").value = unmapped || !fields.length
+    ? (o.params == null ? "" : JSON.stringify(o.params, null, 2)) : "";
+  $("trigger-raw-note").textContent = unmapped && fields.length
+    ? "this run carries parameters the schema does not describe — sent as-is, the fields above are ignored"
+    : fields.length ? "sent instead of the fields above when this is not empty"
+    : "the body sent as this job's parameters";
+
+  $("trigger-dialog").showModal();
+}
+
+// paramField renders one core.ParamField, starting at `value` when there is one.
+// The schema comes from the job's own parameter type, so a form built from it
+// cannot offer a field the job will refuse to decode.
+function paramField(p, value) {
+  const start = value === undefined || value === null ? p.default : value;
+  const label = `<label style="display:block;margin-bottom:10px">
+    <span>${esc(p.label || p.name)}${p.required ? ' <span class="err">*</span>' : ""}
+      <span class="m">${esc(paramHint(p))}</span></span>
+    ${p.description ? `<div class="m">${esc(p.description)}</div>` : ""}`;
+  const attrs = `id="p-${esc(p.name)}" data-param="${esc(p.name)}" data-kind="${esc(p.kind)}"` +
+    (p.required ? ` data-required="1"` : "") +
+    (p.example ? ` placeholder="${esc(p.example)}"` : "");
+  // min/max mean a value for a number and a length for a string, so they cannot
+  // share one attribute; array and object sizes have no input to carry them
+  const bounds = p.kind === "int" || p.kind === "number"
+    ? (p.min != null ? ` min="${esc(p.min)}"` : "") + (p.max != null ? ` max="${esc(p.max)}"` : "")
+    : (p.min != null ? ` minlength="${esc(p.min)}"` : "") + (p.max != null ? ` maxlength="${esc(p.max)}"` : "");
+  const val = start == null ? "" : String(start);
+
+  switch (p.kind) {
+    case "bool":
+      // a checkbox carries its state in `checked`, never in `value`
+      return `${label}<input type="checkbox" ${attrs} ${start === true || val === "true" ? "checked" : ""}></label>`;
+    case "int": case "number":
+      return `${label}<input type="number" ${p.kind === "number" ? 'step="any"' : ""} ${attrs}${bounds} value="${esc(val)}"></label>`;
+    case "date":
+      return `${label}<input type="date" ${attrs} value="${esc(val)}"></label>`;
+    case "time":
+      return `${label}<input type="time" step="1" ${attrs} value="${esc(val)}"></label>`;
+    case "datetime":
+      // the input wants "YYYY-MM-DDTHH:mm", an RFC3339 value carries more
+      return `${label}<input type="datetime-local" step="1" ${attrs} value="${esc(val.replace(/(Z|[+-]\d\d:\d\d)$/, "").slice(0, 19))}"></label>`;
+    case "enum": {
+      // a select is set by marking an option, not by a value attribute
+      const options = (p.options && p.options.length ? p.options : (p.enum || []).map((v) => ({ value: v })));
+      return `${label}<select ${attrs}><option value=""></option>${
+        options.map((o) => `<option value="${esc(o.value)}"${o.value === val ? " selected" : ""}>${
+          esc(o.label || o.value)}</option>`).join("")
+      }</select></label>`;
+    }
+    case "array": case "object": case "any":
+      // a textarea takes its content as text, not as a value attribute
+      return `${label}<textarea rows="4" style="width:100%" spellcheck="false" ${attrs}>${
+        esc(jsonText(start, p))}</textarea></label>`;
+    default:
+      return p.multiline || (p.max != null && p.max > 200)
+        ? `${label}<textarea rows="4" style="width:100%" ${attrs}${bounds}>${esc(val)}</textarea></label>`
+        : `${label}<input type="text" style="width:100%" ${attrs}${bounds}${
+            p.pattern ? ` pattern="${esc(p.pattern)}"` : ""} value="${esc(val)}"></label>`;
+  }
+}
+
+// paramHint puts the constraints the inputs cannot enforce where a human can
+// read them — an array's size, an object's shape, a pattern on a textarea.
+function paramHint(p) {
+  const parts = [p.kind];
+  if (p.min != null) parts.push("min " + p.min);
+  if (p.max != null) parts.push("max " + p.max);
+  if (p.pattern) parts.push("match " + p.pattern);
+  if (p.items && p.items.kind) parts.push("of " + p.items.kind);
+  if (p.fields && p.fields.length) parts.push("{ " + p.fields.map((f) => f.name).join(", ") + " }");
+  return "· " + parts.join(" · ");
+}
+
+// jsonText is the starting text of a JSON field: what is already there, or a
+// skeleton of the declared shape so nobody has to guess the keys.
+function jsonText(start, p) {
+  if (start != null && start !== "") {
+    return typeof start === "string" ? start : JSON.stringify(start, null, 2);
+  }
+  if (p.kind === "object" && p.fields && p.fields.length) {
+    return JSON.stringify(Object.fromEntries(p.fields.map((f) => [f.name, zeroOf(f.kind)])), null, 2);
+  }
+  return "";
+}
+const zeroOf = (kind) => kind === "int" || kind === "number" ? 0
+  : kind === "bool" ? false : kind === "array" ? [] : kind === "object" ? {} : "";
+
+// collectParams reads the form back. An empty optional field is left out
+// entirely rather than sent as "": the job's own defaults should apply, and a
+// zero value is not the same as "not given".
+function collectParams() {
+  const raw = $("trigger-raw").value.trim();
+  if (raw) {
+    try { return JSON.parse(raw); }
+    catch (err) { throw new Error("raw JSON: " + err.message); }
+  }
+
+  const params = {};
+  const missing = [];
+  for (const el of $("trigger-fields").querySelectorAll("[data-param]")) {
+    const name = el.dataset.param, kind = el.dataset.kind;
+    if (kind === "bool") { params[name] = el.checked; continue; }
+    const v = el.value.trim();
+    if (v === "") {
+      // the framework leaves Required to the payload's own Valid — but a form
+      // that shows a red star and then posts anyway spends a round trip saying
+      // what it already knew
+      if (el.dataset.required) missing.push(name);
+      continue;
+    }
+    if (kind === "int" || kind === "number") {
+      const n = Number(v);
+      if (!Number.isFinite(n)) throw new Error(`${name}: not a number`);
+      params[name] = n;
+    } else if (kind === "array" || kind === "object" || kind === "any") {
+      try { params[name] = JSON.parse(v); }
+      catch (err) { throw new Error(`${name}: ${err.message}`); }
+    } else params[name] = v;
+  }
+  if (missing.length) throw new Error("required: " + missing.join(", "));
+  return params;
+}
+
+$("trigger-submit").addEventListener("click", async () => {
+  $("trigger-error").textContent = "";
+  try {
+    const params = collectParams();
+    const body = { params, capture_logs: $("trigger-logs").checked };
+    const run = trigger.replayOf
+      ? await post(`/runs/${encodeURIComponent(trigger.replayOf)}/replay`, body)
+      : await post(`/jobs/${encodeURIComponent(trigger.job)}/trigger`,
+          { ...body, idem_key: $("trigger-idem").value.trim() });
+    $("trigger-dialog").close();
+    await loadJobs();
+    showRun(run.id).catch(fail);
+  } catch (err) { $("trigger-error").textContent = String(err.message || err); }
+});
+
+async function loadRuns() {
+  const params = new URLSearchParams({ limit: "50" });
+  if ($("run-job").value) params.set("job", $("run-job").value);
+  if ($("run-status").value) params.set("status", $("run-status").value);
+  const page = await api("/runs?" + params.toString());
+  const items = page.items || [];
+  $("run-count").textContent = items.length + " of " + page.total;
+  $("run-rows").innerHTML = items.map((r) => `<tr class="clickable" data-run="${esc(r.id)}">
+    <td class="mono">${esc(r.id.slice(0, 8))}</td>
+    <td class="mono">${esc(r.job_name)}</td>
+    <td><span class="st ${esc(r.status)}">${esc(r.status)}</span></td>
+    <td class="m">${esc(r.trigger)}</td>
+    <td>${esc(r.attempt)}/${esc(r.max_attempts)}</td>
+    <td class="m">${esc(r.started_at ? new Date(r.started_at).toLocaleString() : "—")}</td>
+    <td class="m">${r.duration_ms ? duration(r.duration_ms) : "—"}</td></tr>`).join("");
+}
+$("run-reload").addEventListener("click", () => loadRuns().catch(fail));
+$("run-job").addEventListener("change", () => loadRuns().catch(fail));
+$("run-status").addEventListener("change", () => loadRuns().catch(fail));
+$("run-rows").addEventListener("click", (e) => {
+  const tr = e.target.closest("tr[data-run]");
+  if (tr) showRun(tr.dataset.run).catch(fail);
+});
+
+let shownRun = null;
+async function showRun(id) {
+  const [run, logs] = await Promise.all([api("/runs/" + id), api("/runs/" + id + "/logs")]);
+  shownRun = run;
+  $("run-title").textContent = run.job_name + " · " + run.id;
+  const terminal = ["succeeded", "failed", "canceled", "skipped"].includes(run.status);
+  // Cancel while it can still stop, replay once it cannot. Never both: they are
+  // the same intent at two points in a run's life, and offering the wrong one is
+  // how a finished run gets "cancelled" and nothing happens.
+  $("run-actions").innerHTML = !writable ? "" : terminal
+    ? `<button class="act" data-replay="${esc(run.id)}">replay</button>`
+    : `<button class="act" data-cancel="${esc(run.id)}">cancel</button>`;
+  const lines = (logs.items || []).map((l) =>
+    `${new Date(l.at).toISOString()} ${l.level.padEnd(5)} ${l.message}` +
+    (l.attrs ? " " + JSON.stringify(l.attrs) : "")).join("\n");
+  $("run-detail").innerHTML = `
+    <div class="cards">
+      ${card("status", run.status, run.worker_id || "")}
+      ${card("attempt", run.attempt + "/" + run.max_attempts, run.trigger + (run.triggered_by ? " by " + run.triggered_by : ""))}
+      ${card("duration", run.duration_ms ? duration(run.duration_ms) : "—", run.queue)}
+      ${card("progress", run.progress + "%", run.progress_message || "")}
+    </div>
+    ${run.error ? `<h4 class="err">error</h4><pre>${esc(JSON.stringify(run.error, null, 2))}</pre>` : ""}
+    <h4>params</h4><pre>${esc(run.params == null ? "(none — the job ran on its own defaults)" : JSON.stringify(run.params, null, 2))}</pre>
+    ${run.result ? `<h4>result</h4><pre>${esc(JSON.stringify(run.result, null, 2))}</pre>` : ""}
+    <h4>logs</h4><pre id="run-logs">${esc(lines || "(no logs were persisted for this run — see the job's LogPolicy)")}</pre>`;
+  // this dialog is already open when the replay form was opened on top of it
+  if (!$("run-dialog").open) $("run-dialog").showModal();
+
+  // A run in flight persists nothing under the default policy, so the stored
+  // lines above are empty for exactly the run somebody is watching. Tail the
+  // live hub instead — it works whatever the policy says.
+  if (!terminal) tail(run.id);
+}
+
+// tail streams a running job's lines into the open dialog until it finishes, the
+// dialog closes, or the server ends the stream.
+let tailSource = null;
+function tail(id) {
+  closeTail();
+  const out = $("run-logs");
+  if (out.textContent.startsWith("(no logs")) out.textContent = "";
+
+  const src = new EventSource(BASE + "/api/runs/" + id + "/tail");
+  tailSource = src;
+  src.addEventListener("log", (e) => {
+    const l = JSON.parse(e.data);
+    out.textContent += `${new Date(l.at).toISOString()} ${(l.level || "").padEnd(5)} ${l.message}` +
+      (l.attrs ? " " + JSON.stringify(l.attrs) : "") + "\n";
+    out.scrollTop = out.scrollHeight;
+  });
+  src.addEventListener("end", (e) => {
+    out.textContent += `— ${JSON.parse(e.data).reason} —\n`;
+    closeTail();
+    loadRuns().catch(fail);
+  });
+  // An error here is usually the run finishing or the dialog being closed;
+  // reconnecting would reopen a stream nobody is watching.
+  src.onerror = () => closeTail();
+}
+function closeTail() {
+  if (tailSource) { tailSource.close(); tailSource = null; }
+}
+$("run-dialog").addEventListener("close", closeTail);
+
+$("run-actions").addEventListener("click", async (e) => {
+  const cancel = e.target.dataset.cancel, replay = e.target.dataset.replay;
+  try {
+    if (cancel) {
+      const reason = prompt("reason (recorded on the run)", "canceled from devtools");
+      if (reason === null) return;
+      await post(`/runs/${cancel}/cancel`, { reason });
+      await showRun(cancel);
+    } else if (replay) {
+      // through the same form as a trigger, pre-filled with what this run was
+      // given: a replay is usually wanted *because* one of those was wrong
+      if (shownRun) return openTrigger(shownRun.job_name, { replayOf: replay, params: shownRun.params });
+      await showRun((await post(`/runs/${replay}/replay`)).id);
+    } else return;
+    await loadRuns();
+  } catch (err) { fail(err); }
+});
+
+// --- trace ---
+let traces = [];
+async function loadTrace() {
+  try {
+    traces = (await api("/trace")).items || [];
+    $("trace-note").textContent = "";
+  } catch (err) {
+    traces = [];
+    $("trace-note").textContent = String(err.message || err);
+  }
+  renderTrace();
+}
+function renderTrace() {
+  const q = $("trace-filter").value.toLowerCase();
+  const rows = traces.filter((t) => !q || t.path.toLowerCase().includes(q) ||
+    (t.handler || "").toLowerCase().includes(q));
+  $("trace-count").textContent = rows.length + " of " + traces.length;
+  $("trace-rows").innerHTML = rows.map((t) => `<tr class="clickable" data-trace="${esc(t.id)}">
+    <td class="m">${esc(new Date(t.at).toLocaleTimeString())}</td>
+    <td class="method ${esc(t.method)}">${esc(t.method)}</td>
+    <td class="mono">${esc(t.path)}</td>
+    <td class="mono m">${esc(t.handler || "—")}</td>
+    <td>${t.done ? statusCell(t.status) : '<span class="st running">running</span>'}</td>
+    <td class="m">${t.done ? duration(t.latency_ms) : "—"}</td>
+    <td class="m">${esc(t.event_count)}${t.dropped ? " (+" + t.dropped + " dropped)" : ""}</td>
+  </tr>`).join("");
+}
+const statusCell = (s) =>
+  `<span class="st ${s >= 500 ? "failed" : s >= 400 ? "queued" : "succeeded"}">${esc(s)}</span>`;
+
+$("trace-filter").addEventListener("input", renderTrace);
+$("trace-reload").addEventListener("click", () => loadTrace().catch(fail));
+$("trace-clear").addEventListener("click", async () => {
+  try { await api("/trace", { method: "DELETE" }); await loadTrace(); } catch (err) { fail(err); }
+});
+$("trace-rows").addEventListener("click", (e) => {
+  const tr = e.target.closest("tr[data-trace]");
+  if (tr) showTrace(tr.dataset.trace).catch(fail);
+});
+
+async function showTrace(id) {
+  const t = await api("/trace/" + id);
+  $("trace-title").textContent = t.method + " " + t.path;
+  const events = (t.events || []).map((ev) => {
+    const attrs = Object.entries(ev.attrs || {})
+      .map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : v}`).join(" ");
+    return `<tr><td class="m" style="text-align:right">+${esc(ev.offset_ms)}ms</td>
+      <td><span class="st ${ev.level === "error" ? "failed" : ev.level === "warn" ? "queued" : ""}">${esc(ev.level)}</span></td>
+      <td>${esc(ev.message)}<div class="m mono">${esc(attrs)}</div></td>
+      <td class="m mono">${esc(ev.source || "")}</td></tr>`;
+  }).join("");
+  $("trace-detail").innerHTML = `
+    <div class="cards">
+      ${card("status", t.done ? t.status : "running", t.route || "")}
+      ${card("took", t.done ? duration(t.latency_ms) : "—", t.handler || "")}
+      ${card("request id", t.id, t.user ? "by " + t.user : "anonymous")}
+      ${card("events", t.event_count, t.dropped ? t.dropped + " dropped past the cap" : "")}
+    </div>
+    <h4>timeline</h4>
+    ${events
+      ? `<table><thead><tr><th style="width:70px">at</th><th style="width:60px">level</th><th>message</th><th>source</th></tr></thead><tbody>${events}</tbody></table>`
+      : `<p class="m">nothing was logged during this request. The SQL, outgoing-HTTP and model loggers only write slow calls and failures by default — set DB_LOG_LEVEL=info, HTTP_LOG_LEVEL=info or AI_LOG_LEVEL=info to see every one.</p>`}`;
+  $("trace-dialog").showModal();
+}
+
+// --- health ---
+$("health-run").addEventListener("click", async () => {
+  $("health-out").textContent = "probing…";
+  try {
+    const r = await api("/health");
+    const rows = Object.entries(r.checks || {}).map(([name, c]) =>
+      `<tr><td class="mono">${esc(name)}</td>
+        <td><span class="dot ${c.status === "up" ? "on" : "bad"}"></span>${esc(c.status)}</td>
+        <td>${c.critical ? "critical" : "optional"}</td>
+        <td class="m">${esc(c.took_ms)} ms</td>
+        <td class="err mono">${esc(c.error || "")}</td></tr>`).join("");
+    $("health-out").innerHTML = `<p><strong>${esc(r.status)}</strong> <span class="m">in ${esc(r.took_ms)} ms</span></p>
+      <table><thead><tr><th>dependency</th><th>state</th><th>weight</th><th>took</th><th>error</th></tr></thead><tbody>${rows}</tbody></table>`;
+  } catch (e) { $("health-out").textContent = ""; fail(e); }
+});
+
+// --- shared ---
+function duration(ms) {
+  if (ms < 1000) return Math.round(ms) + "ms";
+  const s = Math.round(ms / 1000);
+  if (s < 60) return s + "s";
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + "m " + (s % 60) + "s";
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + "h " + (m % 60) + "m";
+  return Math.floor(h / 24) + "d " + (h % 24) + "h";
+}
+
+const loaders = {
+  overview: loadOverview, routes: loadRoutes, modules: loadModules, config: loadConfig,
+  jobs: loadJobs, trace: loadTrace, health: async () => {},
+};
+function load(tab) { clearFail(); loaders[tab]().catch(fail); }
+
+loadOverview().catch(fail);
+$("refresh").addEventListener("click", () => load(current));
+</script>
+</body>
+</html>
