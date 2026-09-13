@@ -1,3 +1,5 @@
+// Deprecated: v1 is in maintenance mode and receives critical fixes only.
+// New code should import github.com/pskclub/mine-core/v2.
 module github.com/pskclub/mine-core
 
 go 1.20
