@@ -127,7 +127,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ steps.ctx.outputs.line == 'v1' && '1.25' || '' }}
+          go-version: ${{ steps.ctx.outputs.line == 'v1' && '1.27' || '' }}
           go-version-file: ${{ steps.ctx.outputs.line == 'v2' && 'v2/go.mod' || '' }}
           cache-dependency-path: ${{ steps.ctx.outputs.module_dir }}/go.sum
 

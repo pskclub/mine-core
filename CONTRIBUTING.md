@@ -30,7 +30,7 @@ pull request.
 | Module | Import path | Code | Tags | Go |
 |---|---|---|---|---|
 | **v2** | `github.com/pskclub/mine-core/v2` | [`v2/`](./v2) | `v2.x.y` | 1.27 |
-| v1 | `github.com/pskclub/mine-core` | repository root | `v1.x.y` | 1.25 in CI |
+| v1 | `github.com/pskclub/mine-core` | repository root | `v1.x.y` | 1.27 in CI |
 
 **v2 is a nested module.** `go test ./...` at the repository root never
 descends into `v2/` — a nested module is invisible to its parent's package

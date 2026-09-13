@@ -65,7 +65,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ inputs.line == 'v1' && '1.25' || '' }}
+          go-version: ${{ inputs.line == 'v1' && '1.27' || '' }}
           go-version-file: ${{ inputs.line == 'v2' && 'v2/go.mod' || '' }}
           cache-dependency-path: ${{ steps.mod.outputs.dir }}/go.sum
 
