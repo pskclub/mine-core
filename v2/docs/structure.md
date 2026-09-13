@@ -300,7 +300,7 @@ import พี่น้องได้ (มันประกอบของจ�
 
 ## เพิ่ม module ใหม่
 
-`golang-template` มี generator ให้:
+[mine-core-template](https://github.com/pskclub/mine-core-template) มี generator ให้:
 
 ```sh
 make new-module name=order
