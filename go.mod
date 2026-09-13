@@ -20,7 +20,7 @@ require (
 	github.com/mssola/user_agent v0.6.0
 	github.com/rabbitmq/amqp091-go v1.13.0
 	github.com/satori/go.uuid v1.2.0
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.1
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.11.1
 	github.com/thedevsaddam/gojsonq/v2 v2.5.2
