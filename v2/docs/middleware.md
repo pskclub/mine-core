@@ -165,7 +165,7 @@ func authFor(e *core.Server, pick func(*core.Auth) echo.MiddlewareFunc) echo.Mid
 }
 ```
 
-ไฟล์เต็ม: `middlewares/auth.go` (golang-template, internal)
+ไฟล์เต็ม: [middlewares/auth.go](https://github.com/pskclub/mine-core-template/blob/main/middlewares/auth.go)
 
 ## Testing protected routes
 

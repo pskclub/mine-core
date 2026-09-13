@@ -157,7 +157,7 @@ deadline/cancel/trace ของ request นั้นไปเองอยู่�
 ไม่ใช่รูปของแต่ละไฟล์ โครงเต็มของ service จริง (module ที่เป็นเจ้าของตารางตัวเอง,
 composition root เดียว, role และกฎที่ทำให้ import graph เป็นต้นไม้) อยู่ที่
 [Project Structure](./structure.md) และ
-golang-template (internal) คือโครงนั้น
+[mine-core-template](https://github.com/pskclub/mine-core-template) คือโครงนั้น
 ที่ประกอบไว้ให้แล้ว
 
 | Question | Page |
