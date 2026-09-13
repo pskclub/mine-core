@@ -17,7 +17,7 @@ func TestRequesterTestSuite(t *testing.T) {
 func (r *RequesterTestSuite) TestRequest_RequesterToStructPagination_ExpectNetworkError() {
 	mReq := NewMockRequester()
 	mReq.On("Get", "/vc/schema", &RequesterOptions{
-		BaseURL: "https://etda-ssi.finema.dev",
+		BaseURL: "https://api.example.com",
 	}).Return(nil, Error{
 		Status: http.StatusInternalServerError,
 		Code:   "NETWORK_ERROR",
@@ -26,7 +26,7 @@ func (r *RequesterTestSuite) TestRequest_RequesterToStructPagination_ExpectNetwo
 	items := make([]interface{}, 0)
 	pageResponse, ierr := RequesterToStructPagination(items, &PageOptions{}, func() (*RequestResponse, error) {
 		return mReq.Get("/vc/schema", &RequesterOptions{
-			BaseURL: "https://etda-ssi.finema.dev",
+			BaseURL: "https://api.example.com",
 		})
 	})
 
@@ -38,7 +38,7 @@ func (r *RequesterTestSuite) TestRequest_RequesterToStructPagination_ExpectNetwo
 func (r *RequesterTestSuite) TestRequest_RequesterToStructPagination_ExpectInternalServerError() {
 	mReq := NewMockRequester()
 	mReq.On("Get", "/vc/schema", &RequesterOptions{
-		BaseURL: "https://etda-ssi.finema.dev",
+		BaseURL: "https://api.example.com",
 	}).Return(&RequestResponse{
 		Data: nil,
 	}, nil)
@@ -46,7 +46,7 @@ func (r *RequesterTestSuite) TestRequest_RequesterToStructPagination_ExpectInter
 	items := make([]interface{}, 0)
 	pageResponse, ierr := RequesterToStructPagination(items, &PageOptions{}, func() (*RequestResponse, error) {
 		return mReq.Get("/vc/schema", &RequesterOptions{
-			BaseURL: "https://etda-ssi.finema.dev",
+			BaseURL: "https://api.example.com",
 		})
 	})
 
@@ -58,7 +58,7 @@ func (r *RequesterTestSuite) TestRequest_RequesterToStructPagination_ExpectInter
 func (r *RequesterTestSuite) TestRequest_RequesterToStructPagination_ExpectInvalidParamError() {
 	mReq := NewMockRequester()
 	mReq.On("Post", "/vc/schema", nil, &RequesterOptions{
-		BaseURL: "https://etda-ssi.finema.dev",
+		BaseURL: "https://api.example.com",
 	}).Return(&RequestResponse{
 		Data: map[string]interface{}{
 			"code":    "INVALID_PARAMS",
@@ -76,7 +76,7 @@ func (r *RequesterTestSuite) TestRequest_RequesterToStructPagination_ExpectInval
 	items := make([]interface{}, 0)
 	pageResponse, ierr := RequesterToStructPagination(items, &PageOptions{}, func() (*RequestResponse, error) {
 		return mReq.Post("/vc/schema", nil, &RequesterOptions{
-			BaseURL: "https://etda-ssi.finema.dev",
+			BaseURL: "https://api.example.com",
 		})
 	})
 

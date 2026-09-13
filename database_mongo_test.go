@@ -31,7 +31,7 @@ func TestMongoDB_CreateIndex(t *testing.T) {
 	// Create Collection First
 	result, err := mg.Create("test_create_index", map[string]interface{}{
 		"name":        "singh",
-		"description": "I Love Finema",
+		"description": "I Love Go",
 		"age":         18,
 	})
 	assert.NoError(t, err)
@@ -73,7 +73,7 @@ func TestMongoDB_DropIndex(t *testing.T) {
 	// Create Collection First
 	result, err := mg.Create("test_drop_index", map[string]interface{}{
 		"name":        "singh",
-		"description": "I Love Finema",
+		"description": "I Love Go",
 		"age":         18,
 	})
 	assert.NoError(t, err)
@@ -124,7 +124,7 @@ func TestMongoDB_ListIndex(t *testing.T) {
 	// Create Collection First
 	result, err := mg.Create("test_drop_index", map[string]interface{}{
 		"name":        "singh",
-		"description": "I Love Finema",
+		"description": "I Love Go",
 		"age":         18,
 	})
 	assert.NoError(t, err)
@@ -184,7 +184,7 @@ func TestMongoDB_DropAll(t *testing.T) {
 	// Create Collection First
 	result, err := mg.Create("test_drop_index", map[string]interface{}{
 		"name":        "singh",
-		"description": "I Love Finema",
+		"description": "I Love Go",
 		"age":         18,
 	})
 	assert.NoError(t, err)
