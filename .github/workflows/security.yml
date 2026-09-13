@@ -36,9 +36,9 @@ jobs:
             dir: .
             go-version: "1.25"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go-version }}
           go-version-file: ${{ matrix.go-version-file }}
@@ -56,18 +56,18 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # One toolchain builds both: the root module's go directive (1.20) is a
       # floor, not a pin.
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: v2/go.mod
           cache-dependency-path: |
             go.sum
             v2/go.sum
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: go
           build-mode: manual
@@ -80,6 +80,6 @@ jobs:
           go build ./...
           (cd v2 && go build ./...)
 
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         with:
           category: /language:go

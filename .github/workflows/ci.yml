@@ -22,9 +22,9 @@ jobs:
     name: v2 · test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: v2/go.mod
           cache-dependency-path: v2/go.sum
@@ -57,7 +57,7 @@ jobs:
           echo "$total"
           printf '### v2 coverage\n\n    %s\n' "$total" >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: v2-coverage
           path: v2/coverage.out
@@ -75,8 +75,8 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: v2/go.mod
           cache-dependency-path: v2/go.sum
@@ -91,9 +91,9 @@ jobs:
     name: v2 · lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: v2/go.mod
           cache-dependency-path: v2/go.sum
@@ -113,7 +113,7 @@ jobs:
       # Pinned: a new golangci-lint release can add checks, and a lint job that
       # turns red with no change to the code teaches everyone to ignore it.
       # Bump deliberately, together with any fixes the new version asks for.
-      - uses: golangci/golangci-lint-action@v8
+      - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.13.2
           working-directory: v2
@@ -135,7 +135,7 @@ jobs:
     name: docs · links
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check relative markdown links
         run: python3 scripts/check-links.py
 
@@ -148,13 +148,13 @@ jobs:
     name: v1 · test (maintenance)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The root module's go directive says 1.20, but it is compiled by whatever
       # toolchain CI pins, exactly as in production. gofmt and golangci-lint are
       # deliberately not run: the module is committed with CRLF endings, and
       # renormalising it would rewrite every file for no behavioural change.
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: "1.25"
           cache-dependency-path: go.sum
