@@ -1039,3 +1039,42 @@ func TestMonitorConfig_takesTheTimezoneFromTheSchedule(t *testing.T) {
 	require.NotNil(t, plain)
 	assert.Empty(t, plain.Timezone, "no zone anywhere, none claimed to Sentry")
 }
+
+// sentry-go v0.49 removed ClientOptions.DisableLogs and DisableMetrics: the SDK
+// now sends logs and metrics as soon as anything asks for a logger or a meter.
+// The framework's own gates are therefore all that honours an opt-out, and this
+// pins them. Each case also runs enabled, as the control that shows the recorder
+// would have seen what the disabled run must not send.
+func TestSentry_logsAndMetricsStayOffUnlessEnabled(t *testing.T) {
+	for _, tc := range []struct {
+		name, flag string
+		enabled    bool
+	}{
+		{name: "disabled", flag: "false", enabled: false},
+		{name: "enabled", flag: "true", enabled: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app, rec := newSentryApp(t, map[string]string{
+				"SENTRY_ENABLE_LOGS":    tc.flag,
+				"SENTRY_ENABLE_METRICS": tc.flag,
+			})
+			ctx := app.NewContext(sentry.SetHubOnContext(context.Background(), app.Sentry().Hub().Clone()))
+
+			ctx.Log().Warn("cache is cold")
+			app.Log().Error("scheduler could not start")
+			ctx.Meter().Count("orders.created", 1)
+			app.Meter().Gauge("queue.depth", 3)
+			require.True(t, app.Sentry().Flush(2*time.Second))
+
+			if tc.enabled {
+				assert.NotEmpty(t, rec.Logs(), "control: with logs on, the recorder sees them")
+				assert.NotEmpty(t, rec.Metrics(), "control: with metrics on, the recorder sees them")
+				return
+			}
+			assert.Empty(t, rec.Logs(),
+				"logs were not enabled, and the SDK no longer has a switch of its own to stop them")
+			assert.Empty(t, rec.Metrics(),
+				"metrics were not enabled, and the SDK no longer has a switch of its own to stop them")
+		})
+	}
+}
