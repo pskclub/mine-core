@@ -341,10 +341,11 @@ func NewSentry(env IENV, opts ...SentryOptions) (ISentry, IError) {
 		SampleRate:       sampleRate,
 		TracesSampleRate: tracesRate,
 		EnableTracing:    rc.tracing,
-		// the SDK enables logs and metrics the moment anything asks for a logger
-		// or a meter, so opting out has to be explicit
-		DisableLogs:        !rc.logs,
-		DisableMetrics:     !rc.metrics,
+		// No DisableLogs/DisableMetrics: sentry-go v0.49 removed that global switch,
+		// and the SDK sends logs and metrics as soon as anything asks for a logger or
+		// a meter. Opting out is enforced here instead, at the only two places that
+		// ask: the slog handler (sentry_log.go) checks rc.logs before sentry.NewLogger,
+		// and the meter (sentry_metric.go) checks rc.metrics before sentry.NewMeter.
 		TracesSampler:      o.TracesSampler,
 		AttachStacktrace:   boolOrDefault(o.AttachStacktrace, env, "sentry_attach_stacktrace", true),
 		SendDefaultPII:     boolOr(o.SendDefaultPII, cfg.SentrySendDefaultPII),
