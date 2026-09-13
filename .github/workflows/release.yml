@@ -78,7 +78,7 @@ jobs:
             echo "prerelease=$PRERELEASE"
           } >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: refs/tags/${{ steps.ctx.outputs.tag }}
           fetch-depth: 0
@@ -125,7 +125,7 @@ jobs:
           echo "Previous release of $MODULE_PATH: ${PREV:-<none>}"
           echo "tag=$PREV" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ steps.ctx.outputs.line == 'v1' && '1.25' || '' }}
           go-version-file: ${{ steps.ctx.outputs.line == 'v2' && 'v2/go.mod' || '' }}

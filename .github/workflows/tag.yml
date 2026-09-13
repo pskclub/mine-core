@@ -51,7 +51,7 @@ jobs:
           echo "::error::releases are tagged from master, not $REF -- re-run this workflow on master"
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # ./tag reads every tag to find the highest on the line.
           fetch-depth: 0
@@ -63,7 +63,7 @@ jobs:
         run: |
           if [ "$LINE" = v2 ]; then echo "dir=v2"; else echo "dir=."; fi >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ inputs.line == 'v1' && '1.25' || '' }}
           go-version-file: ${{ inputs.line == 'v2' && 'v2/go.mod' || '' }}
