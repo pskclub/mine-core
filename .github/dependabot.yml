@@ -1,0 +1,41 @@
+version: 2
+updates:
+  # Two Go modules, so two entries: dependabot does not descend into a nested
+  # module from the parent's directory.
+
+  - package-ecosystem: gomod
+    directory: /v2
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, "module: v2"]
+    commit-message:
+      prefix: chore(deps)
+    # One PR for every minor/patch bump that week; majors stay separate because
+    # each one can be a breaking change that deserves its own review.
+    groups:
+      v2-minor-and-patch:
+        update-types: [minor, patch]
+
+  # v1 is maintenance-only. A limit of 0 turns off routine version bumps while
+  # leaving Dependabot *security* updates on -- they are governed separately,
+  # by the repository's security settings, not by this file.
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    labels: [dependencies, "module: v1"]
+    commit-message:
+      prefix: chore(deps)
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels: [dependencies, "area: ci"]
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]

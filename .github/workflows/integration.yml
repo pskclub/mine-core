@@ -1,0 +1,76 @@
+name: Integration
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "v2/**"
+      - "Makefile"
+      - ".github/workflows/integration.yml"
+  pull_request:
+    paths:
+      - "v2/**"
+      - "Makefile"
+      - ".github/workflows/integration.yml"
+  schedule:
+    # Nightly: the service images move even when the code does not, and the AI
+    # suite -- which pull requests never run -- needs somewhere to run.
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: v2 · integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: v2/go.mod
+          cache-dependency-path: v2/go.sum
+
+      # The same compose file and make targets a contributor runs locally, so a
+      # green run here means `make services-up test-integration` works too.
+      - name: Start services
+        run: make services-up
+
+      - name: go test -tags=integration
+        env:
+          # A real LLM provider costs money per call. Pull requests never run the
+          # AI suite (fork PRs could not anyway, having no secrets); it runs on
+          # master, nightly and on demand, and only once a key is configured.
+          APP_AI_PROVIDER: ${{ github.event_name != 'pull_request' && vars.APP_AI_PROVIDER || '' }}
+          APP_AI_MODEL: ${{ github.event_name != 'pull_request' && vars.APP_AI_MODEL || '' }}
+          APP_AI_API_KEY: ${{ github.event_name != 'pull_request' && secrets.APP_AI_API_KEY || '' }}
+        run: make test-integration GOTESTFLAGS=-v 2>&1 | tee integration.log
+
+      # Integration tests skip when their service is unreachable, which keeps a
+      # laptop without docker usable. Here it would mean broken service wiring
+      # turns into a green run that tested nothing -- so those skips are
+      # failures. Skips from the optional AI suite are expected and not matched.
+      - name: No service-dependent test was skipped
+        run: |
+          pattern='no redis at|no reachable (mongo|bucket)|no APP_S3_BUCKET|no APP_DB_MONGO_NAME|no database configured|cannot reach the configured database|transactions need a replica set'
+          if grep -A1 -- '--- SKIP' integration.log | grep -E "$pattern"; then
+            echo "::error::integration tests skipped because a service was unreachable -- see above"
+            exit 1
+          fi
+          skipped=$(grep -c -- '--- SKIP' integration.log || true)
+          echo "Skipped tests (optional suites only): $skipped" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Service logs
+        if: failure()
+        run: docker compose -f v2/compose.test.yaml logs --no-color
+
+      - name: Stop services
+        if: always()
+        run: make services-down

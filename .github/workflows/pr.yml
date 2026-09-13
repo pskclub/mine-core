@@ -1,0 +1,100 @@
+name: Pull request
+
+# pull_request_target, not pull_request: labelling needs a write token, and a PR
+# from a fork only ever gets a read-only one under pull_request.
+#
+# This is safe ONLY because nothing here checks out or executes the PR's code.
+# Every step reads the title, body and changed paths through the API. Adding a
+# checkout of the PR head to this file would hand a fork's code a write token.
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  # PRs are squash-merged, so the title becomes the commit on master and the
+  # line in the release notes. It is checked here because it is the only part
+  # of a contributor's work that ends up in history verbatim.
+  title:
+    name: Conventional title
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            test
+            build
+            ci
+            chore
+            revert
+          scopes: |
+            v2
+            v1
+            deps
+            ci
+            docs
+            release
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" in "{title}" should start with a lowercase
+            letter, e.g. "feat(v2): add retry to the requester".
+
+  labels:
+    name: Label
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # Area labels from the paths touched -- see .github/labeler.yml.
+      - uses: actions/labeler@v5
+        with:
+          sync-labels: true
+
+      # Type labels from the title, which .github/release.yml groups the
+      # generated release notes by. A disjoint set from the labeler's, so the
+      # two steps never remove each other's labels.
+      - name: Label from the title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const match = /^(\w+)(?:\(([^)]*)\))?(!)?:/.exec(pr.title);
+
+            const managed = ['type: feature', 'type: fix', 'type: perf', 'type: docs', 'breaking'];
+            const wanted = new Set();
+
+            if (match) {
+              const [, type, scope, bang] = match;
+              const byType = { feat: 'type: feature', fix: 'type: fix', perf: 'type: perf', docs: 'type: docs' };
+              if (byType[type]) wanted.add(byType[type]);
+              if (bang) wanted.add('breaking');
+              // dependabot owns this one; it is only ever added here, never removed
+              if (scope === 'deps') wanted.add('dependencies');
+            }
+            if (/^BREAKING[ -]CHANGE:/m.test(pr.body || '')) wanted.add('breaking');
+
+            const current = new Set(pr.labels.map((l) => l.name));
+            const issue = { owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number };
+
+            for (const name of managed) {
+              if (current.has(name) && !wanted.has(name)) {
+                await github.rest.issues.removeLabel({ ...issue, name });
+              }
+            }
+            const add = [...wanted].filter((name) => !current.has(name));
+            if (add.length) {
+              await github.rest.issues.addLabels({ ...issue, labels: add });
+            }

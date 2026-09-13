@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/pskclub/mine-core/security/advisories/new
+    about: Please report privately — never in a public issue.
+  - name: v2 documentation
+    url: https://github.com/pskclub/mine-core/tree/master/v2/docs
+    about: Many usage questions are already answered in the docs.

@@ -1,0 +1,194 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # v2 -- the active module.
+  # ---------------------------------------------------------------------------
+
+  v2-test:
+    name: v2 · test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: v2/go.mod
+          cache-dependency-path: v2/go.sum
+
+      # `go get` with no arguments mutates go.mod and is not a dependency-fetch
+      # command any more; `go mod download` is the CI-safe equivalent.
+      - name: go mod download
+        working-directory: v2
+        run: go mod download
+
+      - name: go vet
+        working-directory: v2
+        run: go vet ./...
+
+      # -race, because the bugs this suite is most useful against are the ones a
+      # single-threaded run cannot see: a shared *rand.Rand handing two requests
+      # the same id, a package-level slice appended to from every goroutine that
+      # logs. The race detector is built on ThreadSanitizer, which is C, so it
+      # needs cgo -- ubuntu-latest ships gcc, so nothing extra is installed.
+      - name: go test -race
+        working-directory: v2
+        env:
+          CGO_ENABLED: "1"
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Coverage summary
+        working-directory: v2
+        run: |
+          total=$(go tool cover -func=coverage.out | tail -n 1)
+          echo "$total"
+          printf '### v2 coverage\n\n    %s\n' "$total" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-coverage
+          path: v2/coverage.out
+          retention-days: 14
+
+  # A framework is imported from whatever machine a contributor happens to use.
+  # Compiling on all three catches the build-constraint and filepath mistakes a
+  # linux-only job never sees; the full suite still runs on linux only, where
+  # the race detector and the service containers live.
+  v2-crossbuild:
+    name: v2 · build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: v2/go.mod
+          cache-dependency-path: v2/go.sum
+      - name: go build
+        working-directory: v2
+        run: go build ./...
+      - name: go vet
+        working-directory: v2
+        run: go vet ./...
+
+  v2-lint:
+    name: v2 · lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: v2/go.mod
+          cache-dependency-path: v2/go.sum
+
+      # Also covered by golangci-lint's formatter, but this names the fix.
+      - name: gofmt
+        working-directory: v2
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::not gofmt'd -- run 'make fmt'"
+            echo "$unformatted"
+            gofmt -d .
+            exit 1
+          fi
+
+      # Pinned: a new golangci-lint release can add checks, and a lint job that
+      # turns red with no change to the code teaches everyone to ignore it.
+      # Bump deliberately, together with any fixes the new version asks for.
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.13.2
+          working-directory: v2
+
+      # A drifted go.mod is invisible locally (the build still works) and shows
+      # up as an unrelated diff in whichever PR next runs tidy.
+      - name: go mod tidy is a no-op
+        working-directory: v2
+        # -diff reports without rewriting, so this needs no git state to compare.
+        run: |
+          if ! go mod tidy -diff; then
+            echo "::error::go.mod / go.sum are not tidy -- run 'make tidy'"
+            exit 1
+          fi
+
+  # Every link in the docs is relative and hand-written; a renamed page breaks
+  # them silently, and nothing else in CI reads markdown.
+  docs:
+    name: docs · links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check relative markdown links
+        run: python3 scripts/check-links.py
+
+  # ---------------------------------------------------------------------------
+  # v1 -- maintenance only. Still tested, because services that have not
+  # migrated depend on it, but it is not where new work goes.
+  # ---------------------------------------------------------------------------
+
+  v1-test:
+    name: v1 · test (maintenance)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The root module's go directive says 1.20, but it is compiled by whatever
+      # toolchain CI pins, exactly as in production. gofmt and golangci-lint are
+      # deliberately not run: the module is committed with CRLF endings, and
+      # renormalising it would rewrite every file for no behavioural change.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: go.sum
+
+      - name: go mod download
+        run: go mod download
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test -race
+        env:
+          CGO_ENABLED: "1"
+        run: go test -race ./...
+
+  # ---------------------------------------------------------------------------
+  # One stable check name for branch protection. Requiring each job by name
+  # means editing the protection rule every time a job is added or renamed.
+  # ---------------------------------------------------------------------------
+
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [v2-test, v2-crossbuild, v2-lint, docs, v1-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All required jobs passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "::error::a required job finished as '$result'"; exit 1 ;;
+            esac
+          done

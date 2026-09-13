@@ -1,0 +1,31 @@
+# Area labels, applied from the paths a PR touches (actions/labeler v5).
+# Type labels come from the PR title instead -- see workflows/pr.yml.
+
+"module: v2":
+  - changed-files:
+      - any-glob-to-any-file: "v2/**"
+
+"module: v1":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.go"
+          - "go.mod"
+          - "go.sum"
+          - "consts/**"
+          - "errmsgs/**"
+          - "middlewares/**"
+          - "repository/**"
+          - "utils/**"
+
+"area: docs":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+
+"area: ci":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "scripts/**"
+          - "tag"
+          - "Makefile"

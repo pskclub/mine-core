@@ -1,0 +1,121 @@
+name: Tag release
+
+# Cuts the next tag on one module line, then publishes it by calling
+# release.yml directly (a tag pushed with GITHUB_TOKEN does not trigger the
+# push-tag workflow on its own -- see release.yml).
+#
+# Major bumps are not offered: a v3 is a new module path and a new directory,
+# not a tag. ./tag refuses them for the same reason.
+on:
+  workflow_dispatch:
+    inputs:
+      line:
+        description: Module line
+        required: true
+        type: choice
+        default: v2
+        options: [v2, v1]
+      level:
+        description: Version bump
+        required: true
+        type: choice
+        default: patch
+        options: [patch, minor]
+      dry_run:
+        description: Only print the tag that would be created
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tag-release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Tag ${{ inputs.line }} (${{ inputs.level }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.next.outputs.tag }}
+    steps:
+      - name: Releases are cut from master
+        if: github.ref != 'refs/heads/master'
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error::releases are tagged from master, not $REF -- re-run this workflow on master"
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          # ./tag reads every tag to find the highest on the line.
+          fetch-depth: 0
+
+      - name: Resolve the module
+        id: mod
+        env:
+          LINE: ${{ inputs.line }}
+        run: |
+          if [ "$LINE" = v2 ]; then echo "dir=v2"; else echo "dir=."; fi >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.line == 'v1' && '1.25' || '' }}
+          go-version-file: ${{ inputs.line == 'v2' && 'v2/go.mod' || '' }}
+          cache-dependency-path: ${{ steps.mod.outputs.dir }}/go.sum
+
+      # release.yml verifies the tagged tree again; this run exists so a red
+      # master never gets as far as creating a tag in the first place.
+      - name: Test before tagging
+        working-directory: ${{ steps.mod.outputs.dir }}
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          go vet ./...
+          go test -race ./...
+
+      - name: Compute the tag
+        id: next
+        env:
+          LINE: ${{ inputs.line }}
+          LEVEL: ${{ inputs.level }}
+        run: |
+          chmod +x tag
+          NEXT=$(./tag "$LINE" "$LEVEL" --print)
+          echo "Next ${LINE} tag: ${NEXT}"
+          echo "tag=$NEXT" >> "$GITHUB_OUTPUT"
+
+      - name: Push the tag
+        if: ${{ !inputs.dry_run }}
+        env:
+          LINE: ${{ inputs.line }}
+          LEVEL: ${{ inputs.level }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          ./tag "$LINE" "$LEVEL"
+
+      - name: Summary
+        env:
+          TAG: ${{ steps.next.outputs.tag }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = true ]; then
+            echo "Dry run: would tag \`$TAG\`." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Tagged \`$TAG\` -- publishing in the next job." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  release:
+    needs: tag
+    if: ${{ !inputs.dry_run }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
