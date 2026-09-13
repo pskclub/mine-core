@@ -1,0 +1,13 @@
+test:
+	go test ./...
+
+test-integration:
+	go test --tags=integration ./...
+
+test-e2e:
+	go test --tags=e2e ./...
+
+test-all: test test-integration
+
+install:
+	go get ./...

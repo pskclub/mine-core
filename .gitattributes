@@ -1,0 +1,9 @@
+# The v2 module is kept LF-only. gofmt, the postmangen golden fixtures and CI
+# all compare bytes; a CRLF checkout makes every one of them disagree with what
+# the repository actually holds. (The root module predates this and is left as
+# it is, to avoid a renormalisation diff across its whole history.)
+v2/** text=auto eol=lf
+tag text eol=lf
+.github/** text eol=lf
+scripts/** text eol=lf
+LICENSE text eol=lf

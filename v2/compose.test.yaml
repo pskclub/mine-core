@@ -1,0 +1,83 @@
+# Backing services for the v2 integration tests.
+#
+#   make services-up      # start everything and wait until it is usable
+#   make test-integration
+#   make services-down    # stop and delete the data
+#
+# CI's integration workflow runs these exact targets against this exact file,
+# so a green run there means the same commands work on a contributor's machine.
+#
+# "Healthy" here means *usable by the tests*, not merely "process started": the
+# mongo and minio healthchecks also perform the one-time setup the tests need,
+# so `docker compose up --wait` returns only once that setup has happened.
+name: mine-core-test
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # A single-node replica set. Transactions and read preferences need one, and
+  # without it those tests skip rather than fail -- silently shrinking the suite.
+  #
+  # The member is registered as 127.0.0.1:27017 rather than the container's
+  # hostname: a client told replicaSet=rs0 reconnects to whatever address the
+  # set advertises, and only 127.0.0.1 is reachable from the host.
+  mongo:
+    image: mongo:7
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    healthcheck:
+      # Initiates the set on first run, then stays unhealthy until this node has
+      # actually been elected primary -- writes before that fail.
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "try { rs.status() } catch (e) { rs.initiate({_id: 'rs0', members: [{_id: 0, host: '127.0.0.1:27017'}]}) }; quit(db.hello().isWritablePrimary ? 0 : 1)"
+      interval: 3s
+      timeout: 10s
+      retries: 40
+      start_period: 5s
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+    healthcheck:
+      # The tests expect the bucket to exist ("no reachable bucket" otherwise),
+      # so creating it is part of being healthy. --ignore-existing keeps every
+      # later check a no-op.
+      test:
+        - CMD-SHELL
+        - mc alias set local http://127.0.0.1:9000 minioadmin minioadmin >/dev/null && mc mb --ignore-existing local/coretest >/dev/null
+      interval: 2s
+      timeout: 10s
+      retries: 30
+      start_period: 3s
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: coretest
+      POSTGRES_PASSWORD: coretest
+      POSTGRES_DB: coretest
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coretest -d coretest"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

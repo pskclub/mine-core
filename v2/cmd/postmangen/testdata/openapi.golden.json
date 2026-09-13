@@ -1,0 +1,2514 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API Collection (Generated)",
+    "description": "Generated from registered Go routes and request structs.",
+    "version": "0.0.0"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Same origin as this page"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Configured base URL"
+    }
+  ],
+  "tags": [
+    {
+      "name": "note"
+    },
+    {
+      "name": "root"
+    },
+    {
+      "name": "sessions / active"
+    },
+    {
+      "name": "user"
+    }
+  ],
+  "x-tagGroups": [
+    {
+      "name": "note",
+      "tags": [
+        "note"
+      ]
+    },
+    {
+      "name": "root",
+      "tags": [
+        "root"
+      ]
+    },
+    {
+      "name": "user",
+      "tags": [
+        "sessions / active",
+        "user"
+      ]
+    }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "root"
+        ],
+        "summary": "GET /healthz",
+        "operationId": "getHealthz",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "status": "up"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/live": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "GET /live",
+        "operationId": "getLive",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "status": "up"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notes": {
+      "get": {
+        "tags": [
+          "note"
+        ],
+        "summary": "GET /notes",
+        "description": "Handled by `NoteHandler.Pagination`.",
+        "operationId": "NoteHandlerPagination",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "rows per page",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 30
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page number, 1-based",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "body": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "pinned": {
+                            "type": "boolean"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "user_id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "items": [
+                    {
+                      "body": "string",
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "pinned": true,
+                      "title": "Sample title",
+                      "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ],
+                  "limit": 10,
+                  "page": 1,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "note"
+        ],
+        "summary": "POST /notes",
+        "description": "Handled by `NoteHandler.Create`.",
+        "operationId": "NoteHandlerCreate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "description": "required, 1-10000 characters",
+                    "minLength": 1,
+                    "maxLength": 10000
+                  },
+                  "pinned": {
+                    "type": "boolean"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "required, 1-120 characters",
+                    "minLength": 1,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "title",
+                  "body"
+                ]
+              },
+              "example": {
+                "body": "string",
+                "pinned": true,
+                "title": "Sample title"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "pinned": {
+                      "type": "boolean"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "user_id": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "body": "string",
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "pinned": true,
+                  "title": "Sample title",
+                  "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "in": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "INVALID_PARAMS",
+                  "fields": {
+                    "title": {
+                      "code": "REQUIRED",
+                      "in": "body",
+                      "message": "The title field is required"
+                    }
+                  },
+                  "message": "Invalid parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/notes/search": {
+      "get": {
+        "tags": [
+          "note"
+        ],
+        "summary": "GET /notes/search",
+        "description": "Handled by `NoteHandler.Search`.",
+        "operationId": "NoteHandlerSearch",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "optional, defaults to 20",
+            "schema": {
+              "type": "string"
+            },
+            "example": "20"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "example": "string"
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "example": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "body": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "pinned": {
+                            "type": "boolean"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "user_id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "items": [
+                    {
+                      "body": "string",
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "pinned": true,
+                      "title": "Sample title",
+                      "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ],
+                  "limit": 10,
+                  "page": 1,
+                  "total": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notes/{id}/attachments": {
+      "post": {
+        "tags": [
+          "note"
+        ],
+        "summary": "POST /notes/{id}/attachments",
+        "description": "Handled by `NoteHandler.Upload`.",
+        "operationId": "NoteHandlerUpload",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          },
+          {
+            "name": "X-Api-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "example": "string"
+          },
+          {
+            "name": "session_id",
+            "in": "cookie",
+            "schema": {
+              "type": "string"
+            },
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "caption": {
+                    "type": "string",
+                    "description": "optional, defaults to untitled"
+                  },
+                  "file": {
+                    "type": "string",
+                    "contentMediaType": "application/octet-stream"
+                  },
+                  "is_public": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "pinned": {
+                      "type": "boolean"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "user_id": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "body": "string",
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "pinned": true,
+                  "title": "Sample title",
+                  "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "root"
+        ],
+        "summary": "GET /readyz",
+        "operationId": "getReadyz",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "checks": {
+                      "type": "object",
+                      "properties": {
+                        "cache": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string"
+                            },
+                            "took_ms": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "database": {
+                          "type": "object",
+                          "properties": {
+                            "critical": {
+                              "type": "boolean"
+                            },
+                            "status": {
+                              "type": "string"
+                            },
+                            "took_ms": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "service": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "took_ms": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "checks": {
+                    "cache": {
+                      "status": "up",
+                      "took_ms": 1
+                    },
+                    "database": {
+                      "critical": true,
+                      "status": "up",
+                      "took_ms": 2
+                    }
+                  },
+                  "service": "string",
+                  "status": "up",
+                  "took_ms": 3
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "checks": {
+                      "type": "object",
+                      "properties": {
+                        "cache": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string"
+                            },
+                            "took_ms": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "database": {
+                          "type": "object",
+                          "properties": {
+                            "critical": {
+                              "type": "boolean"
+                            },
+                            "error": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string"
+                            },
+                            "took_ms": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "service": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "took_ms": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "checks": {
+                    "cache": {
+                      "status": "up",
+                      "took_ms": 1
+                    },
+                    "database": {
+                      "critical": true,
+                      "error": "context deadline exceeded",
+                      "status": "down",
+                      "took_ms": 3000
+                    }
+                  },
+                  "service": "string",
+                  "status": "down",
+                  "took_ms": 3000
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "GET /status",
+        "operationId": "getStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "GET /users",
+        "description": "Handled by `UserController.Pagination`.",
+        "operationId": "UserControllerPagination",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "2-50 characters",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 50
+            },
+            "example": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "rows per page",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 30
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page number, 1-based",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 1
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "one of: ACTIVE, INACTIVE",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE"
+              ]
+            },
+            "example": "ACTIVE"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "district": {
+                                "type": "object",
+                                "properties": {
+                                  "addresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  },
+                                  "province": {
+                                    "type": "object"
+                                  },
+                                  "province_id": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "district_id": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "type": "string"
+                              },
+                              "province": {
+                                "type": "object",
+                                "properties": {
+                                  "districts": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_en": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "full_name": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "items": [
+                    {
+                      "address": {
+                        "district": {
+                          "addresses": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_th": "Sample name",
+                          "province": {},
+                          "province_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        },
+                        "district_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "line": "string",
+                        "province": {
+                          "districts": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_en": "Sample name",
+                          "name_th": "Sample name"
+                        }
+                      },
+                      "email": "user@example.com",
+                      "full_name": "Jane Doe",
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ],
+                  "limit": 10,
+                  "page": 1,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "POST /users",
+        "description": "Handled by `UserController.Create`.",
+        "operationId": "UserControllerCreate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "required, email address"
+                  },
+                  "full_name": {
+                    "type": "string",
+                    "description": "required, 2-100 characters",
+                    "minLength": 2,
+                    "maxLength": 100
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "required, 8-72 characters",
+                    "minLength": 8,
+                    "maxLength": 72
+                  },
+                  "role": {
+                    "type": "string",
+                    "description": "required, one of: ADMIN, MEMBER",
+                    "enum": [
+                      "ADMIN",
+                      "MEMBER"
+                    ]
+                  }
+                },
+                "required": [
+                  "email",
+                  "full_name",
+                  "password",
+                  "role"
+                ]
+              },
+              "example": {
+                "email": "user@example.com",
+                "full_name": "Jane Doe",
+                "password": "secret1234",
+                "role": "ADMIN"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "object",
+                      "properties": {
+                        "district": {
+                          "type": "object",
+                          "properties": {
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object"
+                              }
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "name_th": {
+                              "type": "string"
+                            },
+                            "province": {
+                              "type": "object",
+                              "properties": {
+                                "districts": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object"
+                                  }
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "name_en": {
+                                  "type": "string"
+                                },
+                                "name_th": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "province_id": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "district_id": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "line": {
+                          "type": "string"
+                        },
+                        "province": {
+                          "type": "object",
+                          "properties": {
+                            "districts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "addresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  },
+                                  "province": {
+                                    "type": "object"
+                                  },
+                                  "province_id": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "name_en": {
+                              "type": "string"
+                            },
+                            "name_th": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "full_name": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "address": {
+                    "district": {
+                      "addresses": [
+                        {}
+                      ],
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "name_th": "Sample name",
+                      "province": {
+                        "districts": [
+                          {}
+                        ],
+                        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "name_en": "Sample name",
+                        "name_th": "Sample name"
+                      },
+                      "province_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    },
+                    "district_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "line": "string",
+                    "province": {
+                      "districts": [
+                        {
+                          "addresses": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_th": "Sample name",
+                          "province": {},
+                          "province_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        }
+                      ],
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "name_en": "Sample name",
+                      "name_th": "Sample name"
+                    }
+                  },
+                  "email": "user@example.com",
+                  "full_name": "Jane Doe",
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "in": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "INVALID_PARAMS",
+                  "fields": {
+                    "email": {
+                      "code": "REQUIRED",
+                      "in": "body",
+                      "message": "The email field is required"
+                    }
+                  },
+                  "message": "Invalid parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/admin/{id}": {
+      "delete": {
+        "tags": [
+          "user"
+        ],
+        "summary": "DELETE /users/admin/{id}",
+        "description": "Handled by `UserController.Delete`.",
+        "operationId": "UserControllerDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/feedback": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "POST /users/feedback",
+        "description": "Handled by `UserController.Feedback`.",
+        "operationId": "UserControllerFeedback",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rating": {
+                    "type": "string",
+                    "description": "optional, defaults to 5"
+                  },
+                  "subject": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/import": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "POST /users/import",
+        "description": "Handled by `UserController.Import`.",
+        "operationId": "UserControllerImport",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "contentMediaType": "application/octet-stream"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description": "required, one of: MERGE, REPLACE",
+                    "enum": [
+                      "MERGE",
+                      "REPLACE"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  },
+                  "overwrite": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "properties": {
+                        "mode": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "in": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "INVALID_PARAMS",
+                  "fields": {
+                    "mode": {
+                      "code": "REQUIRED",
+                      "in": "body",
+                      "message": "The mode field is required"
+                    }
+                  },
+                  "message": "Invalid parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/list": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "GET /users/list",
+        "description": "Handled by `ProfileController.List`.",
+        "operationId": "ProfileControllerList",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "rows per page",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 30
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page number, 1-based",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "district": {
+                                "type": "object",
+                                "properties": {
+                                  "addresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  },
+                                  "province": {
+                                    "type": "object"
+                                  },
+                                  "province_id": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "district_id": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "type": "string"
+                              },
+                              "province": {
+                                "type": "object",
+                                "properties": {
+                                  "districts": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_en": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "full_name": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "items": [
+                    {
+                      "address": {
+                        "district": {
+                          "addresses": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_th": "Sample name",
+                          "province": {},
+                          "province_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        },
+                        "district_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "line": "string",
+                        "province": {
+                          "districts": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_en": "Sample name",
+                          "name_th": "Sample name"
+                        }
+                      },
+                      "email": "user@example.com",
+                      "full_name": "Jane Doe",
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ],
+                  "limit": 10,
+                  "page": 1,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "GET /users/me",
+        "description": "Handled by `ProfileController.Me`.",
+        "operationId": "ProfileControllerMe",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "object",
+                      "properties": {
+                        "district": {
+                          "type": "object",
+                          "properties": {
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object"
+                              }
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "name_th": {
+                              "type": "string"
+                            },
+                            "province": {
+                              "type": "object",
+                              "properties": {
+                                "districts": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object"
+                                  }
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "name_en": {
+                                  "type": "string"
+                                },
+                                "name_th": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "province_id": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "district_id": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "line": {
+                          "type": "string"
+                        },
+                        "province": {
+                          "type": "object",
+                          "properties": {
+                            "districts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "addresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  },
+                                  "province": {
+                                    "type": "object"
+                                  },
+                                  "province_id": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "name_en": {
+                              "type": "string"
+                            },
+                            "name_th": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "full_name": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "address": {
+                    "district": {
+                      "addresses": [
+                        {}
+                      ],
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "name_th": "Sample name",
+                      "province": {
+                        "districts": [
+                          {}
+                        ],
+                        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "name_en": "Sample name",
+                        "name_th": "Sample name"
+                      },
+                      "province_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    },
+                    "district_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "line": "string",
+                    "province": {
+                      "districts": [
+                        {
+                          "addresses": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_th": "Sample name",
+                          "province": {},
+                          "province_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        }
+                      ],
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "name_en": "Sample name",
+                      "name_th": "Sample name"
+                    }
+                  },
+                  "email": "user@example.com",
+                  "full_name": "Jane Doe",
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/search": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "GET /users/search",
+        "description": "Handled by `UserController.Search`.",
+        "operationId": "UserControllerSearch",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "2-50 characters",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 50
+            },
+            "example": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "one of: ACTIVE, INACTIVE",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE"
+              ]
+            },
+            "example": "ACTIVE"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "district": {
+                                "type": "object",
+                                "properties": {
+                                  "addresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  },
+                                  "province": {
+                                    "type": "object"
+                                  },
+                                  "province_id": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "district_id": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "type": "string"
+                              },
+                              "province": {
+                                "type": "object",
+                                "properties": {
+                                  "districts": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_en": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "full_name": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "items": [
+                    {
+                      "address": {
+                        "district": {
+                          "addresses": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_th": "Sample name",
+                          "province": {},
+                          "province_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        },
+                        "district_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "line": "string",
+                        "province": {
+                          "districts": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_en": "Sample name",
+                          "name_th": "Sample name"
+                        }
+                      },
+                      "email": "user@example.com",
+                      "full_name": "Jane Doe",
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ],
+                  "limit": 10,
+                  "page": 1,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "GET /users/{id}",
+        "description": "Handled by `UserController.Find`.",
+        "operationId": "UserControllerFind",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "object",
+                      "properties": {
+                        "district": {
+                          "type": "object",
+                          "properties": {
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object"
+                              }
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "name_th": {
+                              "type": "string"
+                            },
+                            "province": {
+                              "type": "object",
+                              "properties": {
+                                "districts": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object"
+                                  }
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "name_en": {
+                                  "type": "string"
+                                },
+                                "name_th": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "province_id": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "district_id": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "line": {
+                          "type": "string"
+                        },
+                        "province": {
+                          "type": "object",
+                          "properties": {
+                            "districts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "addresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  },
+                                  "province": {
+                                    "type": "object"
+                                  },
+                                  "province_id": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "name_en": {
+                              "type": "string"
+                            },
+                            "name_th": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "full_name": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "address": {
+                    "district": {
+                      "addresses": [
+                        {}
+                      ],
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "name_th": "Sample name",
+                      "province": {
+                        "districts": [
+                          {}
+                        ],
+                        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "name_en": "Sample name",
+                        "name_th": "Sample name"
+                      },
+                      "province_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    },
+                    "district_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "line": "string",
+                    "province": {
+                      "districts": [
+                        {
+                          "addresses": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_th": "Sample name",
+                          "province": {},
+                          "province_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        }
+                      ],
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "name_en": "Sample name",
+                      "name_th": "Sample name"
+                    }
+                  },
+                  "email": "user@example.com",
+                  "full_name": "Jane Doe",
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/{id}/sessions/active": {
+      "get": {
+        "tags": [
+          "sessions / active"
+        ],
+        "summary": "GET /users/{id}/sessions/active",
+        "description": "Handled by `ProfileController.Sessions`.",
+        "operationId": "ProfileControllerSessions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "rows per page",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 30
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page number, 1-based",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "district": {
+                                "type": "object",
+                                "properties": {
+                                  "addresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  },
+                                  "province": {
+                                    "type": "object"
+                                  },
+                                  "province_id": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "district_id": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "type": "string"
+                              },
+                              "province": {
+                                "type": "object",
+                                "properties": {
+                                  "districts": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name_en": {
+                                    "type": "string"
+                                  },
+                                  "name_th": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "full_name": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "items": [
+                    {
+                      "address": {
+                        "district": {
+                          "addresses": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_th": "Sample name",
+                          "province": {},
+                          "province_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        },
+                        "district_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "line": "string",
+                        "province": {
+                          "districts": [
+                            {}
+                          ],
+                          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "name_en": "Sample name",
+                          "name_th": "Sample name"
+                        }
+                      },
+                      "email": "user@example.com",
+                      "full_name": "Jane Doe",
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ],
+                  "limit": 10,
+                  "page": 1,
+                  "total": 1
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

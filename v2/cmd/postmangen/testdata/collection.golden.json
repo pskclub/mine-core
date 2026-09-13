@@ -1,0 +1,2190 @@
+{
+  "info": {
+    "_postman_id": "fixture-generated",
+    "name": "API Collection (Generated)",
+    "description": "Generated from registered Go routes and request structs. Layout: grouped.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "note",
+      "item": [
+        {
+          "name": "GET /notes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notes?limit=30\u0026page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notes"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "30"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/notes?limit=30\u0026page=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notes"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "30"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"items\": [\n    {\n      \"body\": \"string\",\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"pinned\": true,\n      \"title\": \"Sample title\",\n      \"user_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n    }\n  ],\n  \"limit\": 10,\n  \"page\": 1,\n  \"total\": 1\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/notes?limit=30\u0026page=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notes"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "30"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /notes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"string\",\n  \"pinned\": true,\n  \"title\": \"Sample title\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notes"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"body\": \"string\",\n  \"pinned\": true,\n  \"title\": \"Sample title\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/notes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notes"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"body\": \"string\",\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"pinned\": true,\n  \"title\": \"Sample title\",\n  \"user_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n}"
+            },
+            {
+              "name": "400 Invalid parameters",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"body\": \"string\",\n  \"pinned\": true,\n  \"title\": \"Sample title\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/notes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notes"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"INVALID_PARAMS\",\n  \"message\": \"Invalid parameters\",\n  \"fields\": {\n    \"title\": {\n      \"code\": \"REQUIRED\",\n      \"message\": \"The title field is required\",\n      \"in\": \"body\"\n    }\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"body\": \"string\",\n  \"pinned\": true,\n  \"title\": \"Sample title\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/notes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notes"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /notes/:id/attachments",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Cookie",
+                "value": "session_id=3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "type": "text"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "string",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "caption",
+                  "value": "untitled",
+                  "type": "text",
+                  "description": "optional, defaults to untitled"
+                },
+                {
+                  "key": "file",
+                  "type": "file"
+                },
+                {
+                  "key": "is_public",
+                  "value": "true",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notes/:id/attachments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notes",
+                ":id",
+                "attachments"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Cookie",
+                    "value": "session_id=3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Api-Key",
+                    "value": "string",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "caption",
+                      "value": "untitled",
+                      "type": "text",
+                      "description": "optional, defaults to untitled"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file"
+                    },
+                    {
+                      "key": "is_public",
+                      "value": "true",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/notes/:id/attachments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notes",
+                    ":id",
+                    "attachments"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"body\": \"string\",\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"pinned\": true,\n  \"title\": \"Sample title\",\n  \"user_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Cookie",
+                    "value": "session_id=3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Api-Key",
+                    "value": "string",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "caption",
+                      "value": "untitled",
+                      "type": "text",
+                      "description": "optional, defaults to untitled"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file"
+                    },
+                    {
+                      "key": "is_public",
+                      "value": "true",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/notes/:id/attachments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notes",
+                    ":id",
+                    "attachments"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /notes/search",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/notes/search?limit=20\u0026q=string\u0026tag=string",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notes",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "optional, defaults to 20"
+                },
+                {
+                  "key": "q",
+                  "value": "string"
+                },
+                {
+                  "key": "tag",
+                  "value": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/notes/search?limit=20\u0026q=string\u0026tag=string",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notes",
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "optional, defaults to 20"
+                    },
+                    {
+                      "key": "q",
+                      "value": "string"
+                    },
+                    {
+                      "key": "tag",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"items\": [\n    {\n      \"body\": \"string\",\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"pinned\": true,\n      \"title\": \"Sample title\",\n      \"user_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n    }\n  ],\n  \"limit\": 10,\n  \"page\": 1,\n  \"total\": 1\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "root",
+      "item": [
+        {
+          "name": "GET /healthz",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/healthz",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "healthz"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/healthz",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "healthz"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"up\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /readyz",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/readyz",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "readyz"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/readyz",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "readyz"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"up\",\n  \"service\": \"string\",\n  \"checks\": {\n    \"cache\": {\n      \"status\": \"up\",\n      \"took_ms\": 1\n    },\n    \"database\": {\n      \"status\": \"up\",\n      \"critical\": true,\n      \"took_ms\": 2\n    }\n  },\n  \"took_ms\": 3\n}"
+            },
+            {
+              "name": "503 Service Unavailable",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/readyz",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "readyz"
+                  ]
+                }
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"down\",\n  \"service\": \"string\",\n  \"checks\": {\n    \"cache\": {\n      \"status\": \"up\",\n      \"took_ms\": 1\n    },\n    \"database\": {\n      \"status\": \"down\",\n      \"critical\": true,\n      \"error\": \"context deadline exceeded\",\n      \"took_ms\": 3000\n    }\n  },\n  \"took_ms\": 3000\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "user",
+      "item": [
+        {
+          "name": "sessions",
+          "item": [
+            {
+              "name": "active",
+              "item": [
+                {
+                  "name": "GET /users/:id/sessions/active",
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{authToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/users/:id/sessions/active?limit=30\u0026page=1",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "users",
+                        ":id",
+                        "sessions",
+                        "active"
+                      ],
+                      "query": [
+                        {
+                          "key": "limit",
+                          "value": "30"
+                        },
+                        {
+                          "key": "page",
+                          "value": "1"
+                        }
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        }
+                      ]
+                    }
+                  },
+                  "response": [
+                    {
+                      "name": "200 OK",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [
+                          {
+                            "key": "Authorization",
+                            "value": "Bearer {{authToken}}",
+                            "type": "text"
+                          }
+                        ],
+                        "url": {
+                          "raw": "{{baseUrl}}/users/:id/sessions/active?limit=30\u0026page=1",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "users",
+                            ":id",
+                            "sessions",
+                            "active"
+                          ],
+                          "query": [
+                            {
+                              "key": "limit",
+                              "value": "30"
+                            },
+                            {
+                              "key": "page",
+                              "value": "1"
+                            }
+                          ],
+                          "variable": [
+                            {
+                              "key": "id",
+                              "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                            }
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"items\": [\n    {\n      \"address\": {\n        \"district\": {\n          \"addresses\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_th\": \"Sample name\",\n          \"province\": {},\n          \"province_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n        },\n        \"district_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"line\": \"string\",\n        \"province\": {\n          \"districts\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_en\": \"Sample name\",\n          \"name_th\": \"Sample name\"\n        }\n      },\n      \"email\": \"user@example.com\",\n      \"full_name\": \"Jane Doe\",\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n    }\n  ],\n  \"limit\": 10,\n  \"page\": 1,\n  \"total\": 1\n}"
+                    },
+                    {
+                      "name": "401 Unauthorized",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [
+                          {
+                            "key": "Authorization",
+                            "value": "Bearer {{authToken}}",
+                            "type": "text"
+                          }
+                        ],
+                        "url": {
+                          "raw": "{{baseUrl}}/users/:id/sessions/active?limit=30\u0026page=1",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "users",
+                            ":id",
+                            "sessions",
+                            "active"
+                          ],
+                          "query": [
+                            {
+                              "key": "limit",
+                              "value": "30"
+                            },
+                            {
+                              "key": "page",
+                              "value": "1"
+                            }
+                          ],
+                          "variable": [
+                            {
+                              "key": "id",
+                              "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                            }
+                          ]
+                        }
+                      },
+                      "status": "Unauthorized",
+                      "code": 401,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "GET /live",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/live",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "live"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/live",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "live"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"up\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "status"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "status"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ok\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users?keyword=string\u0026limit=30\u0026page=1\u0026status=ACTIVE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "string",
+                  "description": "2-50 characters"
+                },
+                {
+                  "key": "limit",
+                  "value": "30"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "one of: ACTIVE, INACTIVE"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users?keyword=string\u0026limit=30\u0026page=1\u0026status=ACTIVE",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "keyword",
+                      "value": "string",
+                      "description": "2-50 characters"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "30"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "status",
+                      "value": "ACTIVE",
+                      "description": "one of: ACTIVE, INACTIVE"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"items\": [\n    {\n      \"address\": {\n        \"district\": {\n          \"addresses\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_th\": \"Sample name\",\n          \"province\": {},\n          \"province_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n        },\n        \"district_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"line\": \"string\",\n        \"province\": {\n          \"districts\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_en\": \"Sample name\",\n          \"name_th\": \"Sample name\"\n        }\n      },\n      \"email\": \"user@example.com\",\n      \"full_name\": \"Jane Doe\",\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n    }\n  ],\n  \"limit\": 10,\n  \"page\": 1,\n  \"total\": 1\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users?keyword=string\u0026limit=30\u0026page=1\u0026status=ACTIVE",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "keyword",
+                      "value": "string",
+                      "description": "2-50 characters"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "30"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "status",
+                      "value": "ACTIVE",
+                      "description": "one of: ACTIVE, INACTIVE"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /users",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Jane Doe\",\n  \"password\": \"secret1234\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Jane Doe\",\n  \"password\": \"secret1234\",\n  \"role\": \"ADMIN\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"address\": {\n    \"district\": {\n      \"addresses\": [\n        {}\n      ],\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"name_th\": \"Sample name\",\n      \"province\": {\n        \"districts\": [\n          {}\n        ],\n        \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"name_en\": \"Sample name\",\n        \"name_th\": \"Sample name\"\n      },\n      \"province_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n    },\n    \"district_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"line\": \"string\",\n    \"province\": {\n      \"districts\": [\n        {\n          \"addresses\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_th\": \"Sample name\",\n          \"province\": {},\n          \"province_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n        }\n      ],\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"name_en\": \"Sample name\",\n      \"name_th\": \"Sample name\"\n    }\n  },\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Jane Doe\",\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n}"
+            },
+            {
+              "name": "400 Invalid parameters",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Jane Doe\",\n  \"password\": \"secret1234\",\n  \"role\": \"ADMIN\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"INVALID_PARAMS\",\n  \"message\": \"Invalid parameters\",\n  \"fields\": {\n    \"email\": {\n      \"code\": \"REQUIRED\",\n      \"message\": \"The email field is required\",\n      \"in\": \"body\"\n    }\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Jane Doe\",\n  \"password\": \"secret1234\",\n  \"role\": \"ADMIN\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /users/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"address\": {\n    \"district\": {\n      \"addresses\": [\n        {}\n      ],\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"name_th\": \"Sample name\",\n      \"province\": {\n        \"districts\": [\n          {}\n        ],\n        \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"name_en\": \"Sample name\",\n        \"name_th\": \"Sample name\"\n      },\n      \"province_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n    },\n    \"district_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"line\": \"string\",\n    \"province\": {\n      \"districts\": [\n        {\n          \"addresses\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_th\": \"Sample name\",\n          \"province\": {},\n          \"province_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n        }\n      ],\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"name_en\": \"Sample name\",\n      \"name_th\": \"Sample name\"\n    }\n  },\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Jane Doe\",\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE /users/admin/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/admin/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "admin",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/admin/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "admin",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "cookie": [],
+              "body": ""
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/admin/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "admin",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /users/feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "rating",
+                  "value": "5",
+                  "type": "text",
+                  "description": "optional, defaults to 5"
+                },
+                {
+                  "key": "subject",
+                  "value": "string",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/feedback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "feedback"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "rating",
+                      "value": "5",
+                      "type": "text",
+                      "description": "optional, defaults to 5"
+                    },
+                    {
+                      "key": "subject",
+                      "value": "string",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users/feedback",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "feedback"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "cookie": [],
+              "body": ""
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "rating",
+                      "value": "5",
+                      "type": "text",
+                      "description": "optional, defaults to 5"
+                    },
+                    {
+                      "key": "subject",
+                      "value": "string",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users/feedback",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "feedback"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /users/import",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file"
+                },
+                {
+                  "key": "mode",
+                  "value": "MERGE",
+                  "type": "text"
+                },
+                {
+                  "key": "note",
+                  "value": "string",
+                  "type": "text"
+                },
+                {
+                  "key": "overwrite",
+                  "value": "true",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "import"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file"
+                    },
+                    {
+                      "key": "mode",
+                      "value": "MERGE",
+                      "type": "text"
+                    },
+                    {
+                      "key": "note",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "key": "overwrite",
+                      "value": "true",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users/import",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "import"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "cookie": [],
+              "body": ""
+            },
+            {
+              "name": "400 Invalid parameters",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file"
+                    },
+                    {
+                      "key": "mode",
+                      "value": "MERGE",
+                      "type": "text"
+                    },
+                    {
+                      "key": "note",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "key": "overwrite",
+                      "value": "true",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users/import",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "import"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"INVALID_PARAMS\",\n  \"message\": \"Invalid parameters\",\n  \"fields\": {\n    \"mode\": {\n      \"code\": \"REQUIRED\",\n      \"message\": \"The mode field is required\",\n      \"in\": \"body\"\n    }\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file"
+                    },
+                    {
+                      "key": "mode",
+                      "value": "MERGE",
+                      "type": "text"
+                    },
+                    {
+                      "key": "note",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "key": "overwrite",
+                      "value": "true",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users/import",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "import"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /users/list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/list?limit=30\u0026page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "30"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/list?limit=30\u0026page=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "list"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "30"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"items\": [\n    {\n      \"address\": {\n        \"district\": {\n          \"addresses\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_th\": \"Sample name\",\n          \"province\": {},\n          \"province_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n        },\n        \"district_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"line\": \"string\",\n        \"province\": {\n          \"districts\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_en\": \"Sample name\",\n          \"name_th\": \"Sample name\"\n        }\n      },\n      \"email\": \"user@example.com\",\n      \"full_name\": \"Jane Doe\",\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n    }\n  ],\n  \"limit\": 10,\n  \"page\": 1,\n  \"total\": 1\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/list?limit=30\u0026page=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "list"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "30"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /users/me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"address\": {\n    \"district\": {\n      \"addresses\": [\n        {}\n      ],\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"name_th\": \"Sample name\",\n      \"province\": {\n        \"districts\": [\n          {}\n        ],\n        \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"name_en\": \"Sample name\",\n        \"name_th\": \"Sample name\"\n      },\n      \"province_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n    },\n    \"district_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"line\": \"string\",\n    \"province\": {\n      \"districts\": [\n        {\n          \"addresses\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_th\": \"Sample name\",\n          \"province\": {},\n          \"province_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n        }\n      ],\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"name_en\": \"Sample name\",\n      \"name_th\": \"Sample name\"\n    }\n  },\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Jane Doe\",\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /users/search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/search?keyword=string\u0026status=ACTIVE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "string",
+                  "description": "2-50 characters"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "one of: ACTIVE, INACTIVE"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/search?keyword=string\u0026status=ACTIVE",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "keyword",
+                      "value": "string",
+                      "description": "2-50 characters"
+                    },
+                    {
+                      "key": "status",
+                      "value": "ACTIVE",
+                      "description": "one of: ACTIVE, INACTIVE"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"items\": [\n    {\n      \"address\": {\n        \"district\": {\n          \"addresses\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_th\": \"Sample name\",\n          \"province\": {},\n          \"province_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n        },\n        \"district_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n        \"line\": \"string\",\n        \"province\": {\n          \"districts\": [\n            {}\n          ],\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"name_en\": \"Sample name\",\n          \"name_th\": \"Sample name\"\n        }\n      },\n      \"email\": \"user@example.com\",\n      \"full_name\": \"Jane Doe\",\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n    }\n  ],\n  \"limit\": 10,\n  \"page\": 1,\n  \"total\": 1\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/search?keyword=string\u0026status=ACTIVE",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "keyword",
+                      "value": "string",
+                      "description": "2-50 characters"
+                    },
+                    {
+                      "key": "status",
+                      "value": "ACTIVE",
+                      "description": "one of: ACTIVE, INACTIVE"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
