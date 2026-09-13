@@ -153,8 +153,8 @@ jobs:
       # The root module's go directive says 1.25, but it is compiled by whatever
       # toolchain CI pins -- and that has to be a supported Go release:
       # govulncheck refuses to build on anything older. gofmt and golangci-lint are
-      # deliberately not run: the module is committed with CRLF endings, and
-      # renormalising it would rewrite every file for no behavioural change.
+      # not run: v1 is maintenance-only, so its checks stop at vet and the race
+      # tests.
       - uses: actions/setup-go@v7
         with:
           go-version: "1.27"

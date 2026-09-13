@@ -1,9 +1,8 @@
-# The v2 module is kept LF-only. gofmt, the postmangen golden fixtures and CI
-# all compare bytes; a CRLF checkout makes every one of them disagree with what
-# the repository actually holds. (The root module predates this and is left as
-# it is, to avoid a renormalisation diff across its whole history.)
-v2/** text=auto eol=lf
-tag text eol=lf
-.github/** text eol=lf
-scripts/** text eol=lf
-LICENSE text eol=lf
+# LF everywhere. gofmt, the postmangen golden fixtures and CI all compare bytes,
+# and a CRLF checkout on Windows makes every one of them disagree with what the
+# repository holds. Every text file is already committed with LF, so this rule
+# changes no content; it only stops a Windows checkout from introducing CRLF.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
