@@ -1,0 +1,24 @@
+# Categories for GitHub's generated release notes, keyed on the type labels
+# workflows/pr.yml derives from each PR's Conventional Commit title.
+#
+# Generated notes list merged pull requests only. A commit pushed straight to
+# master will not appear -- one more reason every change goes through a PR.
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+  categories:
+    - title: 💥 Breaking changes
+      labels: [breaking]
+    - title: ✨ Features
+      labels: ["type: feature"]
+    - title: 🐛 Fixes
+      labels: ["type: fix"]
+    - title: ⚡ Performance
+      labels: ["type: perf"]
+    - title: 📚 Documentation
+      labels: ["type: docs"]
+    - title: 📦 Dependencies
+      labels: [dependencies]
+    - title: 🔧 Other changes
+      labels: ["*"]

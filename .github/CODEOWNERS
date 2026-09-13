@@ -1,0 +1,4 @@
+# Every pull request requests review from the maintainer. Narrow this per path
+# as more people take ownership of parts of the codebase; the last matching
+# pattern wins.
+* @pskclub

@@ -1,0 +1,214 @@
+name: Release
+
+# Publishes a GitHub release for a vN.x.y tag. Three ways in:
+#
+#   push              a tag pushed by hand (a pre-release, a backport)
+#   workflow_call     tag.yml, straight after it has created the tag
+#   workflow_dispatch re-publishing an existing tag whose release failed
+#
+# tag.yml cannot rely on the push trigger. A tag pushed with GITHUB_TOKEN does
+# not start new workflow runs -- GitHub suppresses them to prevent loops -- so
+# the release would silently never happen. It calls this workflow instead.
+on:
+  push:
+    tags:
+      - "v1.*"
+      - "v2.*"
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to publish, e.g. v2.2.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release ${{ inputs.tag || github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve the tag
+        id: ctx
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^v[12]\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::$TAG is not a v1.x.y or v2.x.y tag"
+            exit 1
+          fi
+
+          LINE="${TAG%%.*}"
+          if [ "$LINE" = v2 ]; then
+            MODULE_DIR=v2
+            GOMOD=v2/go.mod
+            MODULE_PATH=github.com/pskclub/mine-core/v2
+            # v2 is the line new users should land on, so it alone may take
+            # the repository's "Latest release" badge.
+            LATEST=true
+          else
+            MODULE_DIR=.
+            GOMOD=go.mod
+            MODULE_PATH=github.com/pskclub/mine-core
+            LATEST=false
+          fi
+
+          case "$TAG" in
+            *-*) PRERELEASE=true; LATEST=false ;;
+            *)   PRERELEASE=false ;;
+          esac
+
+          {
+            echo "tag=$TAG"
+            echo "line=$LINE"
+            echo "module_dir=$MODULE_DIR"
+            echo "gomod=$GOMOD"
+            echo "module_path=$MODULE_PATH"
+            echo "latest=$LATEST"
+            echo "prerelease=$PRERELEASE"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ steps.ctx.outputs.tag }}
+          fetch-depth: 0
+
+      # A v2 tag on a tree whose v2/go.mod does not declare the /v2 path is a tag
+      # no importer can ever resolve -- and the module proxy would cache that
+      # failure. v2.0.0 through v2.1.0 are exactly this: they predate v2/.
+      - name: Check the tag belongs to its module
+        env:
+          TAG: ${{ steps.ctx.outputs.tag }}
+          GOMOD: ${{ steps.ctx.outputs.gomod }}
+          MODULE_PATH: ${{ steps.ctx.outputs.module_path }}
+        run: |
+          declared=$(awk '$1 == "module" { print $2; exit }' "$GOMOD" | tr -d '\r')
+          if [ "$declared" != "$MODULE_PATH" ]; then
+            echo "::error::$TAG is on the ${TAG%%.*} line, but $GOMOD declares $declared, not $MODULE_PATH"
+            exit 1
+          fi
+
+      # The two lines share one tag namespace and one history, so "the previous
+      # tag" has to mean the previous release *of this module*: the highest tag
+      # on the same line, below this one, whose tree actually holds this module.
+      # That last condition is what skips the stale pre-v2/ tags, which would
+      # otherwise make the first real v2 release describe four years of commits.
+      - name: Find the previous release of this module
+        id: prev
+        env:
+          TAG: ${{ steps.ctx.outputs.tag }}
+          LINE: ${{ steps.ctx.outputs.line }}
+          GOMOD: ${{ steps.ctx.outputs.gomod }}
+          MODULE_PATH: ${{ steps.ctx.outputs.module_path }}
+        run: |
+          PREV=""
+          for t in $(git tag --list "${LINE}.*.*" | grep -v -- '-' | sort -rV); do
+            [ "$t" = "$TAG" ] && continue
+            lower=$(printf '%s\n%s\n' "$t" "$TAG" | sort -V | sed -n '1p')
+            [ "$lower" = "$t" ] || continue
+            declared=$(git show "$t:$GOMOD" 2>/dev/null | awk '$1 == "module" { print $2; exit }' | tr -d '\r')
+            if [ "$declared" = "$MODULE_PATH" ]; then
+              PREV="$t"
+              break
+            fi
+          done
+          echo "Previous release of $MODULE_PATH: ${PREV:-<none>}"
+          echo "tag=$PREV" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ steps.ctx.outputs.line == 'v1' && '1.25' || '' }}
+          go-version-file: ${{ steps.ctx.outputs.line == 'v2' && 'v2/go.mod' || '' }}
+          cache-dependency-path: ${{ steps.ctx.outputs.module_dir }}/go.sum
+
+      # A tag that does not build is worse than a missing one: the module proxy
+      # caches it permanently and it can never be corrected in place.
+      - name: Verify the tagged tree
+        working-directory: ${{ steps.ctx.outputs.module_dir }}
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          go build ./...
+          go vet ./...
+          go test -race ./...
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ctx.outputs.tag }}
+          PREV: ${{ steps.prev.outputs.tag }}
+          MODULE_PATH: ${{ steps.ctx.outputs.module_path }}
+          LATEST: ${{ steps.ctx.outputs.latest }}
+          PRERELEASE: ${{ steps.ctx.outputs.prerelease }}
+        run: |
+          # Re-running a release that already published must not fail: the
+          # dispatch trigger exists precisely to retry the later steps.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists -- nothing to publish."
+            exit 0
+          fi
+
+          fence='```'
+          printf '%ssh\ngo get %s@%s\n%s\n\n' "$fence" "$MODULE_PATH" "$TAG" "$fence" > notes.md
+
+          args=(release create "$TAG"
+                --verify-tag
+                --title "$TAG"
+                --notes-file notes.md
+                --generate-notes
+                "--latest=$LATEST")
+          if [ -n "$PREV" ]; then args+=(--notes-start-tag "$PREV"); fi
+          if [ "$PRERELEASE" = true ]; then args+=(--prerelease); fi
+
+          gh "${args[@]}"
+
+      # Asking the proxy for the version is what makes it fetch and cache it, and
+      # pkg.go.dev indexes from the proxy. Without this the first `go get` after a
+      # release can take minutes to see it. Failure here is a warning, not an
+      # error: the release is already published and the proxy will catch up.
+      - name: Warm the Go module proxy
+        env:
+          TAG: ${{ steps.ctx.outputs.tag }}
+          MODULE_PATH: ${{ steps.ctx.outputs.module_path }}
+        run: |
+          url="https://proxy.golang.org/${MODULE_PATH}/@v/${TAG}.info"
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS "$url"; then
+              echo
+              echo "Proxy has ${MODULE_PATH}@${TAG}"
+              exit 0
+            fi
+            echo "attempt $attempt: not on the proxy yet"
+            sleep 15
+          done
+          echo "::warning::proxy.golang.org has not picked up ${MODULE_PATH}@${TAG} yet; it will on the next request"
+
+      - name: Summary
+        env:
+          TAG: ${{ steps.ctx.outputs.tag }}
+          PREV: ${{ steps.prev.outputs.tag }}
+          MODULE_PATH: ${{ steps.ctx.outputs.module_path }}
+          REPO: ${{ github.repository }}
+        run: |
+          fence='```'
+          {
+            echo "## Released ${MODULE_PATH}@${TAG}"
+            echo
+            echo "- Release: https://github.com/${REPO}/releases/tag/${TAG}"
+            echo "- Docs: https://pkg.go.dev/${MODULE_PATH}@${TAG}"
+            echo "- Notes since: ${PREV:-the first release of this module}"
+            echo
+            echo "${fence}sh"
+            echo "go get ${MODULE_PATH}@${TAG}"
+            echo "${fence}"
+          } >> "$GITHUB_STEP_SUMMARY"

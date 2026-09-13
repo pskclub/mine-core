@@ -1,0 +1,84 @@
+name: Bug report
+description: mine-core behaves differently from its documentation, or from what it should.
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+
+        **Security issues do not belong here.** Please report them privately —
+        see [SECURITY.md](https://github.com/pskclub/mine-core/blob/master/SECURITY.md).
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options:
+        - github.com/pskclub/mine-core/v2
+        - github.com/pskclub/mine-core (v1)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: mine-core version
+      description: From your go.mod, or `go list -m github.com/pskclub/mine-core/v2`
+      placeholder: v2.2.0
+    validations:
+      required: true
+
+  - type: input
+    id: go-version
+    attributes:
+      label: Go version
+      description: Output of `go version`
+      placeholder: go version go1.27.0 linux/amd64
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, including the exact error message.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: And, if you can, where in the docs that expectation comes from.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: |
+        The smallest program or test that shows the problem. A failing test
+        against a memory backend (`core.NewMemoryCache()`, `coretest`, …) is the
+        fastest thing to act on.
+      render: go
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack trace
+      description: Remove secrets, tokens and personal data first.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this has not been reported.
+          required: true
+        - label: I reproduced this on the latest release of the module line I use.
+          required: false

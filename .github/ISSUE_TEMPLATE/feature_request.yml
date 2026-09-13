@@ -1,0 +1,41 @@
+name: Feature request
+description: Propose a capability or an API change.
+labels: [enhancement, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New features go into **v2** only; v1 is in maintenance mode.
+
+        The most useful requests start from the problem. An API sketch is
+        welcome, but the reviewer's first question will be what it is for.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How you imagine it working — an API sketch in Go is ideal.
+      render: go
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including what you do today as a workaround.
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I'd be willing to open a pull request for this.

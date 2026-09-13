@@ -6,3 +6,9 @@ node_modules
 package-lock.json
 yarn-error.log
 .idea
+
+# build artifacts
+*.exe
+dist/
+coverage.out
+integration.log
