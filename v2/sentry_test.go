@@ -73,6 +73,46 @@ func TestSentry_captureErrorCarriesCodeAndScope(t *testing.T) {
 	assert.Equal(t, []string{"{{ default }}", "PAYMENT_FAILED"}, e.Fingerprint)
 }
 
+func TestSentry_titleCarriesTheRootCause(t *testing.T) {
+	app, rec := newSentryApp(t, map[string]string{"DB_PASSWORD": "sup3r-secret-value"})
+	ctx := app.NewContext(context.Background())
+
+	// what a repository hands a service: a driver error wrapped as "repository"
+	driver := errors.New("ERROR: permission denied for table admin_users (SQLSTATE 42501)")
+	repoErr := Wrap(driver, "repository").WithCode("DATABASE_ERROR")
+	out := ctx.NewError(repoErr, repoErr)
+
+	require.Equal(t, 1, rec.Len())
+	e := rec.Last()
+	last := e.Exception[len(e.Exception)-1]
+	assert.Equal(t, "DATABASE_ERROR", last.Type)
+	assert.Equal(t, "repository: "+driver.Error(), last.Value)
+	// only the issue says it; the client still gets the error's own message
+	assert.Equal(t, "repository", out.GetMessage())
+
+	t.Run("a secret in the cause stays masked", func(t *testing.T) {
+		rec.Reset()
+		leaky := Wrap(errors.New("dial failed for sup3r-secret-value"), "repository").WithCode("DATABASE_ERROR")
+		ctx.NewError(leaky, leaky)
+		last := rec.Last().Exception[len(rec.Last().Exception)-1]
+		assert.Equal(t, "repository: dial failed for "+redacted, last.Value)
+	})
+
+	t.Run("a framework root adds nothing", func(t *testing.T) {
+		rec.Reset()
+		ctx.NewError(New(http.StatusBadGateway, "UPSTREAM", "upstream down"), New(http.StatusInternalServerError, "X", "x"))
+		last := rec.Last().Exception[len(rec.Last().Exception)-1]
+		assert.Equal(t, "x", last.Value)
+	})
+
+	t.Run("a message that already says it is not repeated", func(t *testing.T) {
+		rec.Reset()
+		ctx.NewError(errors.New("boom"), New(http.StatusInternalServerError, "X", "failed: boom"))
+		last := rec.Last().Exception[len(rec.Last().Exception)-1]
+		assert.Equal(t, "failed: boom", last.Value)
+	})
+}
+
 func TestSentry_capturesOwnStackNotTheCapturePoint(t *testing.T) {
 	app, rec := newSentryApp(t, nil)
 	ctx := app.NewContext(context.Background())

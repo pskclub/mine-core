@@ -1097,6 +1097,13 @@ func withConfigContext(
 
 // retitle names the issue after the error code instead of "*core.Error", so the
 // Sentry issue list reads like the API's own vocabulary.
+//
+// The value is the error's message followed by the root cause's, when the root
+// is not one of ours: a repository failure is wrapped as "repository", and an
+// issue titled "DATABASE_ERROR: repository" says nothing about which of a dozen
+// database failures it was. The cause is read off the event rather than the
+// hint because the event has already been scrubbed; the client never sees any
+// of this — its message is the error's own.
 func retitle(event *sentry.Event, hint *sentry.EventHint) {
 	if event == nil || hint == nil || len(event.Exception) == 0 {
 		return
@@ -1113,8 +1120,22 @@ func retitle(event *sentry.Event, hint *sentry.EventHint) {
 		last.Type = code
 	}
 	if msg, ok := ierr.GetMessage().(string); ok && msg != "" {
-		last.Value = msg
+		last.Value = withRootCause(msg, event.Exception)
 	}
+}
+
+// withRootCause appends the innermost exception's value to msg, unless that
+// exception is itself a framework error (its code already names it) or msg
+// already says it. sentry-go orders the chain innermost first.
+func withRootCause(msg string, chain []sentry.Exception) string {
+	if len(chain) < 2 {
+		return msg
+	}
+	root := chain[0]
+	if root.Value == "" || strings.Contains(root.Type, "core.Error") || strings.Contains(msg, root.Value) {
+		return msg
+	}
+	return msg + ": " + root.Value
 }
 
 // parseLogStreamLevel is the floor for what reaches Sentry Logs. Unset means
