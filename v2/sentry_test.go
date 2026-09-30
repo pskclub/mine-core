@@ -90,6 +90,17 @@ func TestSentry_titleCarriesTheRootCause(t *testing.T) {
 	// only the issue says it; the client still gets the error's own message
 	assert.Equal(t, "repository", out.GetMessage())
 
+	t.Run("an op names the issue instead of the client's message", func(t *testing.T) {
+		rec.Reset()
+		dbErr := New(http.StatusInternalServerError, "DATABASE_ERROR", "database internal error")
+		wrapped := WrapAs(driver, dbErr, "repository")
+		out := ctx.NewError(wrapped, wrapped)
+		last := rec.Last().Exception[len(rec.Last().Exception)-1]
+		assert.Equal(t, "DATABASE_ERROR", last.Type)
+		assert.Equal(t, "repository: "+driver.Error(), last.Value)
+		assert.Equal(t, "database internal error", out.GetMessage())
+	})
+
 	t.Run("a secret in the cause stays masked", func(t *testing.T) {
 		rec.Reset()
 		leaky := Wrap(errors.New("dial failed for sup3r-secret-value"), "repository").WithCode("DATABASE_ERROR")

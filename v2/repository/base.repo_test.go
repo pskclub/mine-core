@@ -66,6 +66,21 @@ func TestRepo_FindOne_notFound(t *testing.T) {
 	assert.ErrorIs(t, err, errmsgs.NotFound)
 }
 
+// A failure the database reports answers with the DBError sentinel's message,
+// not the "repository" label it is wrapped under, and keeps the driver's error
+// as its cause for the log and Sentry.
+func TestRepo_databaseFailureAnswersWithDBError(t *testing.T) {
+	ctx := newCtx(t)
+	require.NoError(t, ctx.DB().Migrator().DropTable(&User{}))
+
+	_, err := repository.New[User](ctx).Where("name = ?", "alice").FindOne()
+	require.NotNil(t, err)
+	assert.ErrorIs(t, err, errmsgs.DBError)
+	assert.Equal(t, errmsgs.DBError.GetMessage(), err.GetMessage())
+	assert.Contains(t, err.Error(), "repository")
+	assert.Contains(t, core.RootCause(err).Error(), "no such table")
+}
+
 func TestRepo_copyOnChain_doesNotLeak(t *testing.T) {
 	ctx := newCtx(t)
 	base := repository.New[User](ctx)

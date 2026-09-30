@@ -48,6 +48,26 @@ func TestWrap_preservesExistingError(t *testing.T) {
 	assert.Contains(t, fmt.Sprint(wrapped.GetMessage()), "loading user")
 }
 
+func TestWrapAs_answersAsTheSentinelAndKeepsTheLabelOutOfTheMessage(t *testing.T) {
+	sentinel := New(http.StatusInternalServerError, "DATABASE_ERROR", "database internal error")
+	cause := errors.New("ERROR: permission denied for table admin_users (SQLSTATE 42501)")
+
+	e := WrapAs(cause, sentinel, "repository")
+
+	assert.Equal(t, http.StatusInternalServerError, e.GetStatus())
+	assert.Equal(t, "DATABASE_ERROR", e.GetCode())
+	assert.Equal(t, "database internal error", e.GetMessage(), "the client reads the sentinel, not the label")
+	assert.Equal(t, "repository", e.Op())
+	assert.Contains(t, e.Error(), "repository", "the log still says what failed")
+	assert.ErrorIs(t, e, cause)
+	assert.ErrorIs(t, e, sentinel, "matches the sentinel by code")
+	assert.Contains(t, topFrame(t, e).Function, "TestWrapAs_", "the stack starts where it was wrapped")
+	assert.Nil(t, sentinel.cause, "the shared sentinel is untouched")
+
+	assert.Nil(t, WrapAs(nil, sentinel, "repository"))
+	assert.Equal(t, "INTERNAL_SERVER_ERROR", WrapAs(cause, nil, "x").GetCode())
+}
+
 func TestWrap_deepChainMatchesSentinel(t *testing.T) {
 	sentinel := New(http.StatusNotFound, "NOT_FOUND", "not found")
 	err := Wrapf(Wrap(sentinel, "layer 1"), "layer 2")

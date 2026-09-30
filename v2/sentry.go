@@ -1119,6 +1119,13 @@ func retitle(event *sentry.Event, hint *sentry.EventHint) {
 	if code := ierr.GetCode(); code != "" {
 		last.Type = code
 	}
+	// the op names what failed better than a message written for the client
+	// ("Internal server error"), so the issue is titled with it when there is one
+	var e *Error
+	if errors.As(hint.OriginalException, &e) && e.op != "" {
+		last.Value = withRootCause(e.op, event.Exception)
+		return
+	}
 	if msg, ok := ierr.GetMessage().(string); ok && msg != "" {
 		last.Value = withRootCause(msg, event.Exception)
 	}

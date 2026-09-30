@@ -377,6 +377,6 @@ func mapErr(err error) core.IError {
 		// driver-specific fallback; still surfaces as not-found like v1
 		return errmsgs.NotFound
 	default:
-		return core.Wrap(err, "repository").WithCode("DATABASE_ERROR")
+		return core.WrapAs(err, errmsgs.DBError, "repository")
 	}
 }
