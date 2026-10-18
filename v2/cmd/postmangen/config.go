@@ -21,7 +21,7 @@ const configFileName = "postmangen.json"
 // follow.
 //
 // What is deliberately not here: how a handler is wrapped (WithHTTPContext), how
-// a request is bound and validated (Bind/BindWithValidate, the valid package's
+// a request is bound and validated (Bind/BindOnly/BindWithValidate, the valid package's
 // rule chains), how a page is read off the query (GetPageOptions) and what an
 // error body looks like. Those are contracts of the framework itself, so they
 // are fixed — a project that changed them would no longer be describing the

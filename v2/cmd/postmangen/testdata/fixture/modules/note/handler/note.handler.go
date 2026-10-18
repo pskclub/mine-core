@@ -66,6 +66,22 @@ func (m NoteHandler) Search(c httpx.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+// Draft binds without validating — BindOnly, the v2 spelling — so the generator
+// has to document a body for a handler that never calls BindWithValidate.
+func (m NoteHandler) Draft(c httpx.Context) error {
+	input := &DraftRequest{}
+	if err := c.BindOnly(input); err != nil {
+		return err
+	}
+
+	note, err := service.NewNoteService(c).Create(c.GetUserID(), input.Title)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusCreated, note)
+}
+
 func (m NoteHandler) Create(c httpx.Context) error {
 	input := &CreateRequest{}
 	if err := c.BindWithValidate(input); err != nil {

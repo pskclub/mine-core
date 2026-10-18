@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // IError is the structured error returned by every mine-core layer. It keeps the
@@ -48,6 +49,28 @@ type Error struct {
 	// eventID is the Sentry event this error was reported as, set the moment it
 	// is captured so no layer above reports the same failure twice.
 	eventID string
+	// retryAfter is how long the other side asked us to wait (a 429's
+	// Retry-After), for Retry to honour instead of its own backoff.
+	retryAfter time.Duration
+}
+
+// WithRetryAfter records how long the caller should wait before trying again
+// — what a 429 or a 503 said in Retry-After. Retry reads it through
+// RetryAfterOf and waits exactly that long.
+func (e *Error) WithRetryAfter(d time.Duration) *Error {
+	c := e.clone()
+	c.retryAfter = d
+	return c
+}
+
+// RetryAfterOf reports the wait an error carries, if any *Error in its chain
+// was given one with WithRetryAfter.
+func RetryAfterOf(err error) (time.Duration, bool) {
+	var e *Error
+	if errors.As(err, &e) && e.retryAfter > 0 {
+		return e.retryAfter, true
+	}
+	return 0, false
 }
 
 // compile-time guarantee that *Error satisfies IError.
@@ -114,6 +137,27 @@ func wrap(err error, message string, stack []uintptr) *Error {
 			clone.stack = stack
 		}
 		return &clone
+	}
+
+	// an IError of another type — valid.Errors, say — already knows its status
+	// and code; turning it into a 500 because it is not *Error would report a
+	// client's bad input as a server fault
+	var foreign IError
+	if errors.As(err, &foreign) {
+		out := &Error{
+			Status:  foreign.GetStatus(),
+			Code:    foreign.GetCode(),
+			Message: foreign.GetMessage(),
+			cause:   err,
+			stack:   stack,
+		}
+		if message != "" {
+			out.Message = message + ": " + fmt.Sprint(foreign.GetMessage())
+		}
+		if f, ok := foreign.(interface{ GetFields() any }); ok {
+			out.Fields = f.GetFields()
+		}
+		return out
 	}
 
 	return &Error{

@@ -20,6 +20,13 @@ var (
 	CronjobError        = core.New(http.StatusInternalServerError, "CRONJOB_ERROR", "cronjob internal error")
 	InternalServerError = core.New(http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "Internal server error")
 
+	// the three constraint failures a write can hit, as the SQL repository
+	// reports them once the driver's error is translated. DuplicateKey shares
+	// its code and status with the Mongo layer on purpose.
+	DuplicateKey            = core.New(http.StatusConflict, "DUPLICATE_KEY", "a record with the same unique value already exists")
+	ForeignKeyViolated      = core.New(http.StatusConflict, "FOREIGN_KEY_VIOLATED", "the record is referenced by, or references, a record that does not allow it")
+	CheckConstraintViolated = core.New(http.StatusBadRequest, "CHECK_CONSTRAINT_VIOLATED", "the record violates a database constraint")
+
 	NotFound         = core.New(http.StatusNotFound, "NOT_FOUND", "not found")
 	BadRequest       = core.New(http.StatusBadRequest, "BAD_REQUEST", "bad request")
 	Unauthorized     = core.New(http.StatusUnauthorized, "UNAUTHORIZED", "unauthorized")

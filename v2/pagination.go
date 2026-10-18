@@ -186,9 +186,14 @@ func contains(list []string, v string) bool {
 
 // Paginate runs a counted, ordered, limited query into dest and returns a Page.
 func Paginate[T any](db *gorm.DB, dest *[]T, opts *PageOptions) (*Page[T], error) {
-	if opts == nil {
-		opts = &PageOptions{}
+	// a copy: normalising the caller's value would change the page they asked
+	// for underneath them, which matters when the same options drive two
+	// queries
+	normalized := PageOptions{}
+	if opts != nil {
+		normalized = *opts
 	}
+	opts = &normalized
 	opts.normalize()
 
 	var total int64

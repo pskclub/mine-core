@@ -257,7 +257,7 @@ func truncateBody(b []byte) string {
 	if len(b) <= maxLoggedBody {
 		return string(b)
 	}
-	return string(b[:maxLoggedBody]) + "…(truncated)"
+	return cutUTF8(string(b), maxLoggedBody) + "…(truncated)"
 }
 
 // loggerAt binds the logger to the context the call was made on, so the line

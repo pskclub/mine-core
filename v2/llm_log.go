@@ -145,5 +145,5 @@ func truncateForLog(s string) string {
 	if len(s) <= llmPromptMaxChars {
 		return s
 	}
-	return s[:llmPromptMaxChars] + "…(" + strconv.Itoa(len(s)) + " chars)"
+	return cutUTF8(s, llmPromptMaxChars) + "…(" + strconv.Itoa(len(s)) + " chars)"
 }

@@ -454,7 +454,10 @@ func csvCell(v reflect.Value, layout string) (string, error) {
 		return strconv.FormatInt(v.Int(), 10), nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return strconv.FormatUint(v.Uint(), 10), nil
-	case reflect.Float32, reflect.Float64:
+	case reflect.Float32:
+		// formatted as a float32, or 0.1 comes out as 0.10000000149011612
+		return strconv.FormatFloat(v.Float(), 'f', -1, 32), nil
+	case reflect.Float64:
 		return strconv.FormatFloat(v.Float(), 'f', -1, 64), nil
 	default:
 		// silence here is what used to lose every time.Time in an export

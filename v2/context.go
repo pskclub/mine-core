@@ -180,6 +180,12 @@ func WithSentry(s ISentry) Option { return func(a *App) { a.sentry = s } }
 
 // NewApp builds the application container from configuration and options.
 func NewApp(env IENV, opts ...Option) (*App, IError) {
+	if env == nil {
+		// an App without configuration still has to answer Config(), IsDev()
+		// and the boot log; an empty environment does, a nil one panics in
+		// whichever of those is reached first
+		env = emptyENV()
+	}
 	a := &App{
 		env:    env,
 		dbs:    map[string]*gorm.DB{},
@@ -507,7 +513,13 @@ type coreContext struct {
 	context.Context
 	app  *App
 	mode Mode
-	user *ContextUser
+
+	// user has its own lock rather than sharing dataMu: a middleware that sets
+	// the principal must not wait on a handler iterating the data bag, and a
+	// context is handed to goroutines (a request that fans out) often enough
+	// that an unguarded pointer is a race, not a theoretical one.
+	userMu sync.RWMutex
+	user   *ContextUser
 
 	dataMu sync.RWMutex
 	data   map[string]interface{}
@@ -592,9 +604,17 @@ func (c *coreContext) NewError(err error, errorType IError, args ...interface{})
 	return newError(c, err, errorType, args...)
 }
 
-func (c *coreContext) GetUser() *ContextUser { return c.user }
+func (c *coreContext) GetUser() *ContextUser {
+	c.userMu.RLock()
+	defer c.userMu.RUnlock()
+	return c.user
+}
 
-func (c *coreContext) SetUser(user *ContextUser) { c.user = user }
+func (c *coreContext) SetUser(user *ContextUser) {
+	c.userMu.Lock()
+	defer c.userMu.Unlock()
+	c.user = user
+}
 
 func (c *coreContext) GetData(name string) interface{} {
 	c.dataMu.RLock()
@@ -628,7 +648,19 @@ func (c *coreContext) WithContext(ctx context.Context) IContext {
 	// re-stamp the App: a context built from context.Background() would otherwise
 	// lose it, and Requester(ctx) would fall back to a client this App never
 	// configured
-	return &coreContext{Context: c.app.onContext(ctx), app: c.app, mode: c.mode, user: c.user}
+	out := &coreContext{Context: c.app.onContext(ctx), app: c.app, mode: c.mode, user: c.GetUser()}
+	// the data bag travels too, as its own copy: what a handler stored before
+	// handing off to a background context (a tenant, a locale) is still there,
+	// while a later SetData on either side stays on that side
+	c.dataMu.RLock()
+	if len(c.data) > 0 {
+		out.data = make(map[string]interface{}, len(c.data))
+		for k, v := range c.data {
+			out.data[k] = v
+		}
+	}
+	c.dataMu.RUnlock()
+	return out
 }
 
 // newError builds the returned error from errorType, surfacing the underlying

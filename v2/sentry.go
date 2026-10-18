@@ -1250,6 +1250,9 @@ func secretValuesOf(cfg *ENVConfig) []string {
 	candidates := []string{
 		cfg.DBPassword, cfg.DBMongoPassword, cfg.CachePassword, cfg.MQPassword,
 		cfg.JWTSecret, cfg.S3SecretKey, cfg.S3AccessKey, cfg.EmailPassword,
+		// the AI key rides in a query string for some providers (?key=…), and a
+		// Slack token in a header: both show up verbatim in URLs and messages
+		cfg.AIAPIKey, cfg.AIEmbedAPIKey, cfg.ChatSlackToken, cfg.SentryDSN,
 	}
 	out := make([]string, 0, len(candidates))
 	for _, v := range candidates {

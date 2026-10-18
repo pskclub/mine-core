@@ -83,6 +83,20 @@ func (e *Errors) JSON() interface{} {
 	return body{Code: e.GetCode(), Message: fmt.Sprint(e.GetMessage()), Fields: fields}
 }
 
+// GetFields returns the per-field violations in the shape JSON renders them.
+// core.Wrap reads it so a wrapped validation error keeps its fields in the
+// response instead of losing them with the status.
+func (e *Errors) GetFields() any {
+	if len(e.items) == 0 {
+		return nil
+	}
+	fields := make(map[string]fieldError, len(e.items))
+	for _, v := range e.items {
+		fields[v.Field] = fieldError{Code: v.Code, Message: v.Message, In: v.In, Data: v.Data}
+	}
+	return fields
+}
+
 type body struct {
 	Code    string                `json:"code"`
 	Message string                `json:"message"`

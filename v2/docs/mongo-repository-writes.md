@@ -48,6 +48,12 @@ users.ByID(id).Updates(bson.M{"$inc": bson.M{"seats": -1}, "$set": bson.M{"updat
 The naming is deliberate — the plural that means "many documents" is the one that
 reads as a bulk operation.
 
+Like `Delete`, the single-document writes **refuse an empty scope**: `Updates`,
+`Update`, `Inc`, `Push`, `Pull`, `AddToSet`, `Unset` and `DeleteOne` without a filter
+return 400 `UNSCOPED_UPDATE` / `UNSCOPED_DELETE` instead of changing whichever
+document the server happens to list first. `UpdateAll`, `Upsert`, `Save` and
+`FindOneAndUpdate` are the deliberate forms and still accept an empty scope.
+
 ### What the result tells you
 
 ```go

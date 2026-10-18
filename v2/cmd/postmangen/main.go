@@ -1022,7 +1022,9 @@ func buildControllerMethodRegistry(repo *repoInfo, files []*goFile, cfg *Config)
 				if strings.HasPrefix(sel.Sel.Name, paginationPrefix) {
 					info.UsesPagination = true
 				}
-				if sel.Sel.Name != "Bind" && sel.Sel.Name != "BindWithValidate" {
+				// BindOnly is the v2 name for binding without validation; a
+				// handler using it still has a request body worth documenting
+				if sel.Sel.Name != "Bind" && sel.Sel.Name != "BindWithValidate" && sel.Sel.Name != "BindOnly" {
 					return true
 				}
 				if len(call.Args) == 0 || info.RequestType != nil {

@@ -159,6 +159,10 @@ func TestRoutesFromFixture(t *testing.T) {
 			wantHandlerPkg: "modules/note/handler"},
 		{key: "POST /notes", wantAuth: true, wantRequest: "CreateRequest",
 			wantHandlerPkg: "modules/note/handler"},
+		// Bound with BindOnly rather than BindWithValidate: the body is still
+		// a request type the collection has to carry.
+		{key: "POST /notes/drafts", wantAuth: true, wantRequest: "DraftRequest",
+			wantHandlerPkg: "modules/note/handler"},
 		// Nothing bound: the path parameter is stated only by the c.Param call
 		// the handler makes.
 		{key: "POST /notes/:id/attachments", wantAuth: true, wantParams: []string{"id"},

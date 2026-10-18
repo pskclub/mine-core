@@ -101,6 +101,11 @@ func NewDatabase(env IENV, opts ...DBOption) (*gorm.DB, IError) {
 	db, openErr := gorm.Open(dial, &gorm.Config{
 		Logger:  NewGormLogger(o.log, o.logLevel, o.slowQuery),
 		NowFunc: func() time.Time { return time.Now().UTC() },
+		// the driver's constraint errors become gorm.ErrDuplicatedKey and
+		// friends, which the repository maps to 409/400 — the same answer the
+		// Mongo layer already gives — instead of a 500 for a second sign-up
+		// with the same email
+		TranslateError: true,
 	})
 	if openErr != nil {
 		return nil, Wrap(openErr, "database: open")
@@ -115,6 +120,15 @@ func NewDatabase(env IENV, opts ...DBOption) (*gorm.DB, IError) {
 	sqlDB.SetConnMaxLifetime(o.connLifetime)
 
 	return db, nil
+}
+
+// pgQuote wraps v in the single quotes of a libpq key=value string, escaping
+// the backslash and the quote itself, which are the only two characters the
+// format treats specially.
+func pgQuote(v string) string {
+	v = strings.ReplaceAll(v, `\`, `\\`)
+	v = strings.ReplaceAll(v, `'`, `\'`)
+	return "'" + v + "'"
 }
 
 // resolveDSN returns the DSN and driver, preferring an explicit connection
@@ -144,8 +158,11 @@ func resolveDSN(cfg *ENVConfig) (dsn string, driver string, err IError) {
 		if sslmode == "" {
 			sslmode = "disable"
 		}
+		// each value quoted the way libpq reads a key=value string, so a
+		// password with a space or a quote in it stays one value
 		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-			cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort, sslmode)
+			pgQuote(cfg.DBHost), pgQuote(cfg.DBUser), pgQuote(cfg.DBPassword),
+			pgQuote(cfg.DBName), pgQuote(cfg.DBPort), pgQuote(sslmode))
 	case DriverMySQL:
 		dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=UTC",
 			cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)

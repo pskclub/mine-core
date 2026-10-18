@@ -38,8 +38,20 @@ func TestResolveDSN_discreteFields(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, DriverPostgres, driver)
-	assert.Contains(t, dsn, "host=h")
-	assert.Contains(t, dsn, "sslmode=disable")
+	assert.Contains(t, dsn, "host='h'", "libpq values are quoted so a password with a space stays one value")
+	assert.Contains(t, dsn, "sslmode='disable'")
+}
+
+// A generated password can contain a space, a quote or a backslash; libpq's
+// key=value form takes all three only inside quotes with the two specials
+// escaped.
+func TestResolveDSN_postgresQuotesSpecialCharacters(t *testing.T) {
+	dsn, _, err := resolveDSN(&ENVConfig{
+		DBDriver: "postgres", DBHost: "h", DBUser: "u", DBPassword: `p a'ss\w`,
+		DBName: "db", DBPort: "5432",
+	})
+	require.NoError(t, err)
+	assert.Contains(t, dsn, `password='p a\'ss\\w'`, "space kept, quote and backslash escaped")
 }
 
 func TestResolveDSN_unknownDriver(t *testing.T) {

@@ -15,3 +15,10 @@ func (r *CreateRequest) Valid(v *requests.Validator) {
 	v.Str("title", r.Title).Required().Length(1, 120)
 	v.Str("body", r.Body).Required().Length(1, 10000)
 }
+
+// DraftRequest has no Valid: it is bound with BindOnly, so the only thing the
+// generator can read about its body is the struct itself.
+type DraftRequest struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}

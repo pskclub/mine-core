@@ -1,5 +1,3 @@
-//go:build integration
-
 // Package jobstore's integration tests are built around a single conformance
 // suite: one set of assertions describing what an IJobStore and an IJobQueue
 // must do, run against every backend. A new backend (Redis, Mongo, your own) is

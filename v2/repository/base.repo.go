@@ -358,8 +358,21 @@ func (r *Repo[M]) Raw(dest any, sql string, values ...any) core.IError {
 }
 
 // Transaction runs fn in a transaction bound to the repository context.
+//
+// The handle fn receives starts clean: the repository's own scope — Model(M)
+// and any Where built so far — belongs to the queries made on this repository,
+// not to a handle fn will use for other tables. Build repositories on it with
+// NewWithDB, or use it as a plain *gorm.DB.
+//
+// An IError returned by fn comes back as it is: a business rule that said 400
+// inside the transaction is still a 400 outside it, not a DATABASE_ERROR.
 func (r *Repo[M]) Transaction(fn func(tx *gorm.DB) error) core.IError {
-	if err := r.session().Transaction(func(g *gorm.DB) error { return fn(g) }); err != nil {
+	// NewDB drops the statement the repository has built up; without it a tx
+	// still carrying Model(User) would make tx.Create(&Order{}) write a User.
+	// It has to be the last Session in the chain: WithContext clones the
+	// statement it is given, Model and all, and would undo it.
+	db := r.db.WithContext(r.ctx).Session(&gorm.Session{NewDB: true})
+	if err := db.Transaction(func(g *gorm.DB) error { return fn(g) }); err != nil {
 		return mapErr(err)
 	}
 	return nil
@@ -368,11 +381,24 @@ func (r *Repo[M]) Transaction(fn func(tx *gorm.DB) error) core.IError {
 // mapErr converts GORM errors to framework errors without string matching on the
 // common cases.
 func mapErr(err error) core.IError {
+	var ie core.IError
 	switch {
 	case err == nil:
 		return nil
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return errmsgs.NotFound
+	case errors.Is(err, gorm.ErrDuplicatedKey):
+		// 409, as the Mongo layer answers for the same thing; a unique
+		// constraint is a conflict with what is there, not a server fault
+		return core.WrapAs(err, errmsgs.DuplicateKey, "repository")
+	case errors.Is(err, gorm.ErrForeignKeyViolated):
+		return core.WrapAs(err, errmsgs.ForeignKeyViolated, "repository")
+	case errors.Is(err, gorm.ErrCheckConstraintViolated):
+		return core.WrapAs(err, errmsgs.CheckConstraintViolated, "repository")
+	case errors.As(err, &ie):
+		// raised by a hook or a Transaction callback: it already says what
+		// went wrong and with which status, so it is the answer
+		return ie
 	case strings.Contains(err.Error(), "invalid input syntax for type uuid"):
 		// driver-specific fallback; still surfaces as not-found like v1
 		return errmsgs.NotFound

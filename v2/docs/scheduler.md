@@ -94,6 +94,10 @@ UTC แล้วแจ้ง missed run ทุกวันที่ job รั�
   taking down the scheduler.
 - **Errors logged** — a non-nil return is logged with the job name.
 - Invalid cron expressions are rejected by `AddByCron` at registration time.
+- **หนึ่ง scheduler ต่อ cluster** — ทุก process ที่รัน scheduler ยิงทุก tick เอง และ run
+  ที่สร้างจาก tick ไม่มี `IdemKey` ดังนั้น N replica = N run ต่อ tick ให้ role ที่รัน
+  scheduler มี replica เดียวเสมอ (scale `api` แทน) หรือล็อกเองใน job ด้วย
+  `core.WithLock` — ดู [Lifecycle & roles](./lifecycle.md)
 - **Timezone** — default คือของ process, `WithSchedulerLocation` ตั้งทั้งก้อน,
   `CronIn` ทับเป็นราย job (ดูหัวข้อข้างบน)
 

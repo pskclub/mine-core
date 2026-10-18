@@ -2,6 +2,7 @@ package devtools
 
 import (
 	"net/http"
+	"net/url"
 	"runtime"
 	"sort"
 	"strconv"
@@ -208,7 +209,7 @@ func (d *devtools) config(c core.IHTTPContext) error {
 	for _, k := range keys {
 		v := all[k]
 		e := configEntry{Key: k, Set: v != ""}
-		if isSecret(k) {
+		if isSecret(k) || looksLikeCredentialURL(v) {
 			e.Secret = true
 		} else {
 			e.Value = v
@@ -222,19 +223,38 @@ func (d *devtools) config(c core.IHTTPContext) error {
 // to print. The list errs towards withholding: a connection string carries a
 // password, a DSN carries a key, and a value wrongly hidden costs one look at
 // the deployment while a value wrongly shown cannot be taken back.
+//
+// The short fragments ("key", "pass", "auth") also catch keys a service named
+// itself — PAYMENT_API_KEY, SMTP_PASS, WEBHOOK_AUTH — which the typed
+// configuration knows nothing about.
 var secretKeyParts = []string{
-	"password", "secret", "token", "credential", "private",
-	"api_key", "access_key", "secret_key", "dsn", "connection_string",
+	"password", "passwd", "pass", "pwd", "secret", "token", "credential", "private",
+	"key", "auth", "dsn", "connection_string", "salt", "signing", "cert",
 }
 
 func isSecret(key string) bool {
-	k := strings.ToLower(key)
+	k := strings.ReplaceAll(strings.ToLower(key), "-", "_")
 	for _, part := range secretKeyParts {
 		if strings.Contains(k, part) {
 			return true
 		}
 	}
 	return false
+}
+
+// looksLikeCredentialURL reports whether a value is a URL carrying a user and
+// password (amqp://user:pass@host, postgres://…) — a secret whatever its key
+// is called.
+func looksLikeCredentialURL(v string) bool {
+	if !strings.Contains(v, "://") || !strings.Contains(v, "@") {
+		return false
+	}
+	u, err := url.Parse(v)
+	if err != nil || u.User == nil {
+		return false
+	}
+	_, hasPassword := u.User.Password()
+	return hasPassword
 }
 
 // --- health ---

@@ -449,9 +449,17 @@ func markCaptured(err error, id string) {
 		return
 	}
 	var e *Error
-	if errors.As(err, &e) && e.eventID == "" {
-		e.eventID = id
+	if !errors.As(err, &e) || e.eventID != "" {
+		return
 	}
+	// a package-level sentinel (errmsgs.DBError) has no stack — captureStack
+	// drops init-time frames — and is shared by every caller in the process.
+	// Marking it would silence every later report that passes through the same
+	// value, and write to a shared variable from a request goroutine.
+	if e.stack == nil {
+		return
+	}
+	e.eventID = id
 }
 
 func breadcrumbLevel(l slog.Level) Level {

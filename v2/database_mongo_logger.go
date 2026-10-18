@@ -171,7 +171,11 @@ func (m *mongoMonitor) onStarted(_ context.Context, e *event.CommandStartedEvent
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if len(m.started) >= maxMongoInFlight {
-		return
+		// the map only grows past this when finished events stopped arriving
+		// for entries that are here (a driver quirk, a dropped connection).
+		// Those are orphans: dropping them loses nothing, while refusing new
+		// entries forever would turn the command log off for good.
+		clear(m.started)
 	}
 	m.started[e.RequestID] = cmd
 }
@@ -409,5 +413,5 @@ func truncate(s string, max int) string {
 	if len(s) <= max {
 		return s
 	}
-	return s[:max] + "…(truncated)"
+	return cutUTF8(s, max) + "…(truncated)"
 }

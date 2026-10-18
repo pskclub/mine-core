@@ -1,6 +1,8 @@
 package mongorepo
 
 import (
+	"fmt"
+
 	core "github.com/pskclub/mine-core/v2"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -344,7 +346,10 @@ func (p *Pipeline[D, T]) One() (*T, core.IError) {
 		return nil, err
 	}
 	if len(rows) == 0 {
-		return nil, core.New(404, "NOT_FOUND", "not found")
+		// the same cause FindOne reports, so errors.Is(err, core.ErrDocumentNotFound)
+		// answers the same whichever way the document was looked for
+		return nil, core.New(404, "NOT_FOUND", "not found").
+			WithCause(fmt.Errorf("%w: %s", core.ErrDocumentNotFound, p.repo.collection))
 	}
 	return &rows[0], nil
 }

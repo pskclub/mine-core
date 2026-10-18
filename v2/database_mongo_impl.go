@@ -368,17 +368,22 @@ func (m *mongoDB) FindOne(dest any, collection string, filter any, opts ...Mongo
 }
 
 func (m *mongoDB) Find(dest any, collection string, filter any, opts ...MongoFindOptions) IError {
-	cur, err := m.FindCursor(collection, filter, opts...)
+	cur, cancel, err := m.findCursor(collection, filter, opts...)
 	if err != nil {
 		return err
 	}
+	// the whole result is read here, so the deadline can be released here too
+	// instead of waiting for MaxTime to expire on its own
+	defer cancel()
 	if allErr := cur.All(m.Context(), dest); allErr != nil {
 		return m.fail("find", collection, allErr)
 	}
 	return nil
 }
 
-func (m *mongoDB) FindCursor(collection string, filter any, opts ...MongoFindOptions) (*mongo.Cursor, IError) {
+// findCursor opens a cursor and hands back the cancel of its deadline, for a
+// caller that knows when the cursor is drained.
+func (m *mongoDB) findCursor(collection string, filter any, opts ...MongoFindOptions) (*mongo.Cursor, context.CancelFunc, IError) {
 	findOpts := options.Find()
 	var maxTime time.Duration
 	if len(opts) > 0 {
@@ -415,9 +420,17 @@ func (m *mongoDB) FindCursor(collection string, filter any, opts ...MongoFindOpt
 	cur, err := m.Collection(collection).Find(ctx, orEmptyFilter(filter), findOpts)
 	if err != nil {
 		cancel()
-		return nil, m.fail("find", collection, err)
+		return nil, nil, m.fail("find", collection, err)
 	}
-	return cur, nil
+	return cur, cancel, nil
+}
+
+// FindCursor is findCursor for a caller that reads the cursor itself. The
+// deadline is left to MaxTime, because there is no moment here at which the
+// cursor is known to be drained.
+func (m *mongoDB) FindCursor(collection string, filter any, opts ...MongoFindOptions) (*mongo.Cursor, IError) {
+	cur, _, err := m.findCursor(collection, filter, opts...)
+	return cur, err
 }
 
 func (m *mongoDB) Count(collection string, filter any) (int64, IError) {
@@ -464,17 +477,19 @@ func (m *mongoDB) Distinct(dest any, collection, field string, filter any) IErro
 }
 
 func (m *mongoDB) Aggregate(dest any, collection string, pipeline any, opts ...MongoAggregateOptions) IError {
-	cur, err := m.AggregateCursor(collection, pipeline, opts...)
+	cur, cancel, err := m.aggregateCursor(collection, pipeline, opts...)
 	if err != nil {
 		return err
 	}
+	defer cancel() // as in Find: drained here, released here
 	if allErr := cur.All(m.Context(), dest); allErr != nil {
 		return m.fail("aggregate", collection, allErr)
 	}
 	return nil
 }
 
-func (m *mongoDB) AggregateCursor(collection string, pipeline any, opts ...MongoAggregateOptions) (*mongo.Cursor, IError) {
+// aggregateCursor is findCursor for a pipeline.
+func (m *mongoDB) aggregateCursor(collection string, pipeline any, opts ...MongoAggregateOptions) (*mongo.Cursor, context.CancelFunc, IError) {
 	if pipeline == nil {
 		pipeline = mongo.Pipeline{}
 	}
@@ -503,15 +518,22 @@ func (m *mongoDB) AggregateCursor(collection string, pipeline any, opts ...Mongo
 		}
 	}
 
-	// as in FindCursor: the cursor outlives this call, so the deadline does too
+	// as in findCursor: the cursor outlives this call, so the deadline does too
 	ctx, cancel := m.timedContext(maxTime)
 
 	cur, err := m.Collection(collection).Aggregate(ctx, pipeline, aggOpts)
 	if err != nil {
 		cancel()
-		return nil, m.fail("aggregate", collection, err)
+		return nil, nil, m.fail("aggregate", collection, err)
 	}
-	return cur, nil
+	return cur, cancel, nil
+}
+
+// AggregateCursor is aggregateCursor for a caller that reads the cursor itself;
+// the deadline is left to MaxTime, as in FindCursor.
+func (m *mongoDB) AggregateCursor(collection string, pipeline any, opts ...MongoAggregateOptions) (*mongo.Cursor, IError) {
+	cur, _, err := m.aggregateCursor(collection, pipeline, opts...)
+	return cur, err
 }
 
 // ---------------------------------------------------------------------------
@@ -559,8 +581,17 @@ func (m *mongoDB) UpdateMany(collection string, filter, update any, opts ...Mong
 
 func (m *mongoDB) ReplaceOne(collection string, filter, document any, opts ...MongoUpdateOptions) (MongoUpdateResult, IError) {
 	replaceOpts := options.Replace()
-	if len(opts) > 0 && opts[0].Upsert {
-		replaceOpts.SetUpsert(true)
+	if len(opts) > 0 {
+		o := opts[0]
+		if o.Upsert {
+			replaceOpts.SetUpsert(true)
+		}
+		if o.Hint != nil {
+			replaceOpts.SetHint(o.Hint)
+		}
+		if o.Collation != nil {
+			replaceOpts.SetCollation(o.Collation)
+		}
 	}
 	res, err := m.Collection(collection).ReplaceOne(m.Context(), orEmptyFilter(filter), document, replaceOpts)
 	if err != nil {
@@ -972,16 +1003,42 @@ func mongoIndexKeys(fields []string) bson.D {
 // helper became two.
 func mongoUpdateOneOptions(opts []MongoUpdateOptions) *options.UpdateOneOptionsBuilder {
 	updateOpts := options.UpdateOne()
-	if len(opts) > 0 && opts[0].Upsert {
+	if len(opts) == 0 {
+		return updateOpts
+	}
+	o := opts[0]
+	if o.Upsert {
 		updateOpts.SetUpsert(true)
+	}
+	if len(o.ArrayFilters) > 0 {
+		updateOpts.SetArrayFilters(o.ArrayFilters)
+	}
+	if o.Hint != nil {
+		updateOpts.SetHint(o.Hint)
+	}
+	if o.Collation != nil {
+		updateOpts.SetCollation(o.Collation)
 	}
 	return updateOpts
 }
 
 func mongoUpdateManyOptions(opts []MongoUpdateOptions) *options.UpdateManyOptionsBuilder {
 	updateOpts := options.UpdateMany()
-	if len(opts) > 0 && opts[0].Upsert {
+	if len(opts) == 0 {
+		return updateOpts
+	}
+	o := opts[0]
+	if o.Upsert {
 		updateOpts.SetUpsert(true)
+	}
+	if len(o.ArrayFilters) > 0 {
+		updateOpts.SetArrayFilters(o.ArrayFilters)
+	}
+	if o.Hint != nil {
+		updateOpts.SetHint(o.Hint)
+	}
+	if o.Collation != nil {
+		updateOpts.SetCollation(o.Collation)
 	}
 	return updateOpts
 }

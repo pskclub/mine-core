@@ -14,7 +14,24 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
+
+// cutUTF8 returns at most n bytes of s without splitting a multi-byte rune: a
+// Thai string cut at an arbitrary byte ends in a broken character, which a log
+// viewer renders as garbage and a JSON encoder escapes into noise.
+func cutUTF8(s string, n int) string {
+	if n <= 0 {
+		return ""
+	}
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
+}
 
 // ILogger is the structured logger. Same name/verbs as v1 so callers do not
 // relearn, but it is backed by the standard library's log/slog and uses
