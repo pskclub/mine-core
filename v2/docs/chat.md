@@ -32,6 +32,8 @@ app, _ := core.NewApp(env, core.WithChat("default", chat))
 CHAT_SLACK_TOKEN=xoxb-...        # bot token (ต้องมี scope chat:write)
 CHAT_SLACK_CHANNEL=#ops          # ปลายทาง default เมื่อข้อความไม่ระบุเอง
 CHAT_SLACK_TIMEOUT=10            # วินาที
+CHAT_SLACK_RETRIES=2             # ลองใหม่เมื่อโดน 429 (default 2, 0 = ปิด)
+CHAT_SLACK_RETRY_MAX_WAIT=10     # วินาที — Retry-After ที่นานกว่านี้คืน 429 แทนที่จะรอ
 ```
 
 ไม่ตั้ง `CHAT_SLACK_TOKEN` = provider ปิดอยู่ **แต่ service ยัง boot ได้** — ความล้มเหลว
@@ -175,7 +177,7 @@ chat ไม่ degrade เงียบๆ เหมือน [cache](./cache.md)
 | `CHAT_MISSING_SCOPE` | token ขาด scope — `chat:write` คือตัวที่ใช้โพสต์ |
 | `CHAT_CHANNEL_ARCHIVED` | ห้องถูก archive |
 | `CHAT_MESSAGE_TOO_LONG` | ยาวเกินลิมิตของ Slack |
-| `CHAT_RATE_LIMITED` | 429 — ข้อความแนบ `Retry-After` ที่ Slack บอกมา |
+| `CHAT_RATE_LIMITED` | 429 — driver รอตาม `Retry-After` แล้วลองใหม่เองไม่เกิน `CHAT_SLACK_RETRIES` ครั้ง (เมื่อรอไม่เกิน `CHAT_SLACK_RETRY_MAX_WAIT`) ถ้ายังไม่ผ่านหรือรอนานเกิน error นี้พกเวลารอไว้ให้ `core.RetryAfterOf(err)` อ่านได้ |
 | `CHAT_INVALID_MESSAGE` | payload ผิดรูป (blocks/attachments) |
 | `CHAT_SEND_FAILED` | network fail หรือ error อื่นของ Slack |
 | `CHAT_DISABLED` | ไม่ได้ตั้ง `CHAT_SLACK_TOKEN` |

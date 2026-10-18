@@ -32,6 +32,19 @@ core.NewHTTPServer(app, &core.HTTPOptions{DisableRequestLog: core.BoolPtr(true)}
 
 หรือปิดทั้งระบบด้วย `APP_LOG_REQUEST=false` — option ชนะ env เสมอ
 
+ถ้าไม่อยากปิดทั้งหมด แค่ไม่อยากเห็น probe ทุกห้าวินาที ให้ข้ามเฉพาะ path:
+
+```
+APP_LOG_REQUEST_SKIP_PATHS=/healthz,/readyz,/_dev/*
+```
+
+```go
+core.NewHTTPServer(app, &core.HTTPOptions{SkipRequestLogPaths: []string{"/healthz", "/readyz"}})
+```
+
+ข้ามเฉพาะตอน**ตอบสำเร็จ** (status ต่ำกว่า 400) — `/readyz` ที่ตอบ 503 ยังได้บรรทัดของมัน
+เพราะนั่นคือบรรทัดที่อธิบายว่าทำไม pod ถูกถอดออกจาก service ลงท้ายด้วย `*` = prefix
+
 ## เขียน middleware เอง
 
 echo v5 เปลี่ยน `echo.Context` จาก interface เป็น **struct** — signature จึงเป็น
@@ -71,6 +84,42 @@ e.Use(RequireAPIKey(key))                         // ทุก route
 api := e.Group("/api", RequireAPIKey(key))        // ทั้ง group
 e.GET("/reports", ListReports, RequireAPIKey(key)) // route เดียว
 ```
+
+## Rate limit และ security headers ที่มีให้ในตัว
+
+สองตัวนี้**ไม่อยู่ใน stack default** เพราะค่าที่ถูกขึ้นกับ service: เพดานของ login
+ไม่ใช่เพดานของ list และ server ที่ render HTML ต้องการ policy ของตัวเอง ใส่เองตรงที่ใช้
+
+```go
+e.Use(core.SecureHeaders())                                            // ทั้ง server
+e.POST("/login", h.Login, core.RateLimit(app.Cache(), 5, time.Minute))  // route เดียว
+e.Use(core.RateLimit(app.Cache(), 100, time.Minute))                    // ต่อ route ต่อ IP
+```
+
+`RateLimit(cache, limit, window)` คือ fixed-window limiter บน `ICache.Incr` — หนึ่ง
+increment ที่ TTL คือ window, นับแยกตาม route (pattern ไม่ใช่ URL) และตาม key ที่
+default คือ IP ของ client ทุก response ติด `X-RateLimit-Limit` / `X-RateLimit-Remaining`
+และตอนปฏิเสธ (`429 TOO_MANY_REQUESTS`) ติด `Retry-After` เป็นวินาทีของ window
+
+- `RateLimitKey(fn)` — นับตาม**สิ่งที่กำลังปกป้อง** ไม่ใช่ตามผู้เรียกเสมอไป: login ตาม
+  account, OTP ตามเบอร์โทร key ว่าง = ไม่นับ
+- `RateLimitSkip(fn)` — ยกเว้น health check หรือ internal caller
+- `RateLimitPrefix(name)` — สอง limit บน route เดียวกันคนละ window ต้องคนละ prefix
+
+⚠️ **fail-open** — cache พัง หรือ service ไม่มี `CACHE_*` (cache ปิดอยู่ `Incr` คืน 0)
+ทุก request ผ่านหมด เพราะ limiter ที่ fail-closed ทำให้ redis สะดุดครั้งเดียวกลายเป็น
+outage ทั้งระบบ สิ่งที่ต้องกันจริงๆ แม้ไม่มี cache (จำนวนครั้งกรอก OTP ผิด) ต้องนับใน database
+
+⚠️ IP มาจาก `RealIP()` ของ echo ซึ่งอ่าน peer address เว้นแต่ตั้ง `IPExtractor` — หลัง
+load balancer ทุก request มี address เดียวกัน ต้องตั้ง `e.IPExtractor =
+echo.ExtractIPFromXFFHeader(...)` ด้วย range ของ proxy ไม่งั้นทั้ง service แชร์ budget เดียว
+
+`SecureHeaders()` ตั้ง `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: strict-origin-when-cross-origin` และ `Strict-Transport-Security`
+(max-age หนึ่งปี) **เฉพาะ request ที่มาทาง HTTPS** — ตรงหรือผ่าน proxy ที่ตั้ง
+`X-Forwarded-Proto` — เพื่อไม่ให้ dev server ปัก localhost ของใครไว้กับ HTTPS header
+ที่ handler ตั้งเองไม่ถูกทับ CSP กับ Permissions-Policy ว่างโดย default (API ไม่มีหน้าให้ปกป้อง
+และ policy ผิดบนหน้าเว็บพังแบบมองไม่เห็น) ตั้งผ่าน `SecureHeadersOptions` เมื่อ render HTML
 
 ## Auth ที่มีให้ในตัว
 

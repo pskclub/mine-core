@@ -81,8 +81,9 @@ if err == nil && n > 10 {
 }
 ```
 
-หนึ่ง `Incr` พร้อม TTL = fixed-window rate limiter ที่ atomic —
-[Counters & Rate Limits](./cache-counters.md)
+หนึ่ง `Incr` พร้อม TTL = fixed-window rate limiter ที่ atomic — ซึ่ง framework ห่อให้แล้วเป็น
+middleware `core.RateLimit(app.Cache(), 10, time.Minute)` พร้อม header และ 429 ที่ถูกต้อง
+([Middleware](./middleware.md)) โค้ดข้างบนคือสิ่งที่อยู่ข้างในมัน
 
 ⚠️ cache ที่ไม่ได้ตั้งค่าไว้ **degrade เงียบ** ตามดีไซน์ แปลว่า rate limit ที่พึ่ง cache
 จะไม่ทำงานเลยใน environment ที่ไม่มี redis — สิ่งที่ต้องกันจริงๆ (จำนวนครั้งที่กรอก OTP

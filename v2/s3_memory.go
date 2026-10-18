@@ -3,6 +3,8 @@ package core
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -99,6 +101,17 @@ func (m *memoryStorage) PutBytes(key string, data []byte, opts ...StoragePutOpti
 	opt := firstPutOption(opts)
 	stored := append([]byte(nil), data...)
 
+	// S3's ETag for a single-part upload is the MD5 of the body, so a test
+	// comparing two uploads by ETag sees the same answer it would get from S3;
+	// a copy of the metadata, so the caller's map is not shared with the store
+	var metadata map[string]string
+	if len(opt.Metadata) > 0 {
+		metadata = make(map[string]string, len(opt.Metadata))
+		for k, v := range opt.Metadata {
+			metadata[k] = v
+		}
+	}
+
 	m.store.mu.Lock()
 	defer m.store.mu.Unlock()
 	m.store.objects[m.Key(key)] = memoryObject{
@@ -107,9 +120,9 @@ func (m *memoryStorage) PutBytes(key string, data []byte, opts ...StoragePutOpti
 			Key:          key,
 			Size:         int64(len(stored)),
 			ContentType:  contentTypeFor(key, opt.ContentType),
-			ETag:         fmt.Sprintf("%x", len(stored)),
+			ETag:         fmt.Sprintf("%x", md5.Sum(stored)),
 			LastModified: time.Now().UTC(),
-			Metadata:     opt.Metadata,
+			Metadata:     metadata,
 		},
 	}
 	return nil
@@ -260,6 +273,44 @@ func (m *memoryStorage) PresignPut(key string, ttl time.Duration, opts ...Storag
 		"content-type": {contentTypeFor(key, firstPutOption(opts).ContentType)},
 	}
 	return m.presignedURL("put", key, query), nil
+}
+
+// PresignPost answers the same shape the real storage does. The policy is
+// written into the "policy" field as plain JSON rather than signed, so a test
+// can read back what the upload would have been held to.
+func (m *memoryStorage) PresignPost(key string, ttl time.Duration, opts ...StoragePostOptions) (*StoragePostForm, IError) {
+	opt := firstPostOption(opts)
+	full := m.Key(key)
+	fields := map[string]string{
+		"key":                   full,
+		"x-amz-expires":         fmt.Sprint(int(ttl.Seconds())),
+		"success_action_status": "201",
+	}
+	if opt.KeyPrefix {
+		fields["key"] = full + "${filename}"
+	}
+	if opt.ContentType != "" {
+		fields["Content-Type"] = opt.ContentType
+	}
+	if opt.CacheControl != "" {
+		fields["Cache-Control"] = opt.CacheControl
+	}
+	if opt.Public {
+		fields["acl"] = "public-read"
+	}
+	if opt.SuccessRedirect != "" {
+		delete(fields, "success_action_status")
+		fields["success_action_redirect"] = opt.SuccessRedirect
+	}
+	for k, v := range opt.Metadata {
+		fields["x-amz-meta-"+k] = v
+	}
+	policy, err := json.Marshal(map[string]any{"conditions": postConditions(full, opt)})
+	if err != nil {
+		return nil, Wrap(err, "storage: presign post")
+	}
+	fields["policy"] = string(policy)
+	return &StoragePostForm{URL: "memory://" + m.bucket + "?op=post", Fields: fields}, nil
 }
 
 func (m *memoryStorage) presignedURL(op, key string, query url.Values) string {

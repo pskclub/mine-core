@@ -33,6 +33,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -58,7 +59,27 @@ type Config struct {
 	// DefaultBaseURL.
 	BaseURL string
 	Timeout time.Duration
+	// Retries is how many times a post Slack rate-limited (429) is tried
+	// again, waiting what Retry-After said. Nil means DefaultRetries; a
+	// pointer to zero disables it.
+	Retries *int
+	// RetryMaxWait caps the Retry-After a retry will wait for (default
+	// DefaultRetryMaxWait). A longer one is returned as the 429 instead of
+	// holding the caller for it.
+	RetryMaxWait time.Duration
 }
+
+// Defaults of the 429 retry.
+const (
+	DefaultRetries      = 2
+	DefaultRetryMaxWait = 10 * time.Second
+)
+
+// WithRetries sets how many times a rate-limited post is tried again.
+func WithRetries(n int) Option { return func(c *Config) { c.Retries = &n } }
+
+// WithRetryMaxWait caps the Retry-After a retry waits for.
+func WithRetryMaxWait(d time.Duration) Option { return func(c *Config) { c.RetryMaxWait = d } }
 
 // Option overrides one piece of configuration.
 type Option func(*Config)
@@ -85,9 +106,11 @@ func New(env core.IENV, opts ...Option) (core.IChat, core.IError) {
 	if env != nil {
 		c := env.Config()
 		cfg = Config{
-			Token:   c.ChatSlackToken,
-			Channel: c.ChatSlackChannel,
-			Timeout: time.Duration(c.ChatSlackTimeout) * time.Second,
+			Token:        c.ChatSlackToken,
+			Channel:      c.ChatSlackChannel,
+			Timeout:      time.Duration(c.ChatSlackTimeout) * time.Second,
+			Retries:      c.ChatSlackRetries,
+			RetryMaxWait: time.Duration(c.ChatSlackRetryMaxWait) * time.Second,
 		}
 	}
 	for _, o := range opts {
@@ -109,6 +132,13 @@ func NewConfig(cfg Config) (core.IChat, core.IError) {
 	cfg.BaseURL = strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL
+	}
+	if cfg.Retries == nil {
+		retries := DefaultRetries
+		cfg.Retries = &retries
+	}
+	if cfg.RetryMaxWait <= 0 {
+		cfg.RetryMaxWait = DefaultRetryMaxWait
 	}
 	return &chat{ctx: context.Background(), cfg: cfg}, nil
 }
@@ -181,8 +211,31 @@ type slackResponse struct {
 	Error string `json:"error"`
 }
 
-// call runs one Web API method and unmarshals the result into out.
+// call runs one Web API method and unmarshals the result into out, trying
+// again after a 429 for as long as Slack's Retry-After is worth waiting for.
 func (c *chat) call(method string, body map[string]any, out any) core.IError {
+	err := core.Retry(c.ctx, core.RetryPolicy{
+		Attempts: *c.cfg.Retries + 1,
+		RetryIf: func(err error) bool {
+			// only a rate limit, and only one that names a wait this caller
+			// is prepared to sit through; anything else is the answer
+			wait, ok := core.RetryAfterOf(err)
+			return ok && wait <= c.cfg.RetryMaxWait
+		},
+	}, func(int) error {
+		return c.callOnce(method, body, out)
+	})
+	if err == nil {
+		return nil
+	}
+	if ie, ok := err.(core.IError); ok {
+		return ie
+	}
+	return core.Wrap(err, "chat: slack "+method)
+}
+
+// callOnce is a single attempt at a Web API method.
+func (c *chat) callOnce(method string, body map[string]any, out any) core.IError {
 	ctx, cancel := context.WithTimeout(c.ctx, c.cfg.Timeout)
 	defer cancel()
 
@@ -377,9 +430,15 @@ func rateLimited(retryAfter string) core.IError {
 	if retryAfter = strings.TrimSpace(retryAfter); retryAfter == "" {
 		return err
 	}
-	return err.
+	err = err.
 		WithMessage("chat: slack is rate limiting this app (retry after " + retryAfter + "s)").
 		WithFields(map[string]any{"retry_after": retryAfter})
+	// the wait as a value too, so core.Retry (and a caller's own backoff)
+	// can honour it without parsing the message
+	if secs, perr := strconv.Atoi(retryAfter); perr == nil && secs > 0 {
+		err = err.WithRetryAfter(time.Duration(secs) * time.Second)
+	}
+	return err
 }
 
 // apiError maps Slack's error string onto a framework error, keeping the ones a

@@ -100,11 +100,22 @@ FIREBASE_CREDENTIAL="{
 |---|---|---|---|
 | `LOG_LEVEL` | string | `info` | `debug` / `info` / `warn` / `error` — ค่าที่ไม่รู้จักถือเป็น `info` **`debug` เปิด log ของ SQL ทุก statement ด้วย** — แยกออกจากกันได้ด้วย `DB_LOG_LEVEL` (ดู [Query logging](./database-logging.md)) |
 | `LOG_REQUEST` | bool | `true` | เขียนบรรทัด access log ต่อ request (`GET /users/42 200 12ms`) ตั้ง `false` เมื่อมี gateway/ingress log ให้อยู่แล้ว หรือ traffic เป็น health check ล้วน — ไม่กระทบ breadcrumb / Sentry Logs / error reporting ซึ่งเป็นสวิตช์ของตัวเอง ปรับต่อ server ได้ที่ `HTTPOptions.DisableRequestLog` (ชนะค่านี้) |
+| `LOG_REQUEST_SKIP_PATHS` | string | *(ว่าง)* | path ที่**ไม่**เขียน access line เมื่อตอบสำเร็จ (ต่ำกว่า 400) คั่นด้วย `,` ตรงตัว หรือ prefix เมื่อลงท้ายด้วย `*` — เช่น `/healthz,/readyz,/_dev/*` probe ที่ตอบ 503 ยังถูก log เสมอ ปรับต่อ server ได้ที่ `HTTPOptions.SkipRequestLogPaths` (ชนะค่านี้) |
 | `LOG_SIMPLE` | bool | `false` | `true` = text handler อ่านง่ายสำหรับ dev, `false` = JSON สำหรับ production log pipeline |
 | `LOG_SOURCE` | bool | `true` | แนบ `source` = ไฟล์:บรรทัดที่เขียน log บรรทัดนั้น (`services/payment.go:88`) ตั้ง `false` เมื่อ log ถี่จนไม่อยากจ่ายค่า `runtime.Callers` ต่อบรรทัด (ดู [Logger](./logger.md)) |
 
 > `LOG_HOST` / `LOG_PORT` ยังมีอยู่ใน `ENVConfig` เพื่อความเข้ากันได้กับ v1 (graylog)
 > แต่ **v2 ยังไม่ได้ใช้** — ตั้งไว้ก็ไม่มีผล
+
+## HTTP client (Requester)
+
+| Key | ชนิด | Default | คำอธิบาย |
+|---|---|---|---|
+| `HTTP_LOG_LEVEL` | string | `warn` | log ของ call ขาออก: `silent` / `error` / `warn` (ช้าและพัง) / `info` / `debug` (ทุก call) — แยกจาก `LOG_LEVEL` |
+| `HTTP_LOG_BODY` | bool | `false` | แนบ body ของ request/response ลง log (scrub + truncate แล้ว) |
+| `HTTP_RETRY_COUNT` | int | `0` | ลองใหม่กี่ครั้งเมื่อ connection พัง / 429 / 5xx — เฉพาะ method idempotent หรือ request ที่มี `Idempotency-Key` (ดู [Requester → Retry](./requester.md#retry)) |
+| `HTTP_RETRY_WAIT_MS` | int | `200` | รอครั้งแรก (ms) แล้วเพิ่มสองเท่า |
+| `HTTP_RETRY_MAX_WAIT_MS` | int | `2000` | เพดานการรอต่อครั้ง (ms) |
 
 ## Sentry
 
@@ -257,6 +268,7 @@ FIREBASE_CREDENTIAL="{
 | `EMAIL_TLS_SKIP_VERIFY` | bool | `false` | รับ certificate ที่ verify ไม่ผ่าน — เฉพาะ relay self-signed ในเน็ตส่วนตัว |
 | `EMAIL_AUTH` | string | `auto` | `plain` \| `login` \| `cram-md5` \| `xoauth2` \| `scram-sha-1` \| `scram-sha-256` \| `none` \| `auto` |
 | `EMAIL_TIMEOUT` | int | `30` | วินาที ครอบทั้งการส่งหนึ่งฉบับ |
+| `EMAIL_RETRY_COUNT` | int | `0` | ส่งซ้ำกี่ครั้งเมื่อต่อไม่ติดหรือ SMTP ตอบ 4xx ชั่วคราว (ดู [Mailer → Retry](./mailer.md#retry)) |
 
 ## Push (FCM)
 

@@ -159,12 +159,25 @@ type MailerOption func(*mailerConfig)
 
 type mailerConfig struct {
 	timeout   time.Duration
+	retries   int
 	tlsPolicy *mail.TLSPolicy
 	authType  *mail.SMTPAuthType
 	tlsConfig *tls.Config
 	helo      string
 	templates *MailTemplates
 	clientOpt []mail.Option
+}
+
+// WithMailRetries sends a message again, up to n more times with backoff, when
+// the connection or the SMTP conversation failed (overrides EMAIL_RETRY_COUNT).
+// A message the server rejected — a bad recipient, a refused sender — is not
+// retried: it would be rejected the same way again.
+func WithMailRetries(n int) MailerOption {
+	return func(c *mailerConfig) {
+		if n >= 0 {
+			c.retries = n
+		}
+	}
 }
 
 // WithMailTimeout bounds one delivery (default DefaultMailTimeout).
@@ -215,6 +228,7 @@ type mailer struct {
 	sender    string
 	name      string
 	timeout   time.Duration
+	retries   int
 	templates *MailTemplates
 }
 
@@ -233,7 +247,7 @@ var _ IMailer = (*mailer)(nil)
 //	EMAIL_TIMEOUT=30             # seconds
 func NewMailer(env IENV, opts ...MailerOption) (IMailer, IError) {
 	cfg := env.Config()
-	c := &mailerConfig{timeout: DefaultMailTimeout}
+	c := &mailerConfig{timeout: DefaultMailTimeout, retries: cfg.EmailRetryCount}
 	if cfg.EmailTimeout > 0 {
 		c.timeout = time.Duration(cfg.EmailTimeout) * time.Second
 	}
@@ -298,8 +312,21 @@ func NewMailer(env IENV, opts ...MailerOption) (IMailer, IError) {
 		sender:    cfg.EmailSender,
 		name:      cfg.EmailSenderName,
 		timeout:   c.timeout,
+		retries:   c.retries,
 		templates: c.templates,
 	}, nil
+}
+
+// mailFailureIsTransient decides whether a failed send is worth another try.
+// go-mail reports an SMTP reply it did not like as a SendError; a permanent
+// one (5xx: bad recipient, refused sender) will come back the same way, while a
+// connection that dropped or a 4xx "try later" may not.
+func mailFailureIsTransient(err error) bool {
+	var se *mail.SendError
+	if errors.As(err, &se) {
+		return se.IsTemp()
+	}
+	return true // a dial or TLS failure: the server was not reached at all
 }
 
 // mailTLSPolicy reads EMAIL_TLS_POLICY. Mandatory is the default: credentials
@@ -404,10 +431,15 @@ func (m *mailer) Send(msg EmailMessage) IError {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(m.ctx, m.timeout)
-	defer cancel()
-
-	if sendErr := m.client.DialAndSendWithContext(ctx, built); sendErr != nil {
+	// the timeout covers one attempt; the retries each get their own, and the
+	// whole thing still ends when the bound context does
+	sendErr := Retry(m.ctx, RetryPolicy{Attempts: m.retries + 1, RetryIf: mailFailureIsTransient},
+		func(int) error {
+			ctx, cancel := context.WithTimeout(m.ctx, m.timeout)
+			defer cancel()
+			return m.client.DialAndSendWithContext(ctx, built)
+		})
+	if sendErr != nil {
 		breadcrumbTo(m.ctx, Breadcrumb{
 			Type: "error", Category: "mail.send", Level: LevelError,
 			Message: msg.Subject,

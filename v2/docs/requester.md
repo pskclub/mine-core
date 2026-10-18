@@ -64,6 +64,9 @@ _ = resp // *resty.Response (status, headers, raw body, trace info)
 
 `err` is a `core.IError`:
 - transport failure → code `NETWORK_ERROR`, status 500
+- the caller's context was cancelled → code `REQUEST_CANCELED`, status 499 (ต่ำกว่า 500
+  จึงไม่ถูกรายงานเป็น incident ใน Sentry — client ที่ปิดแท็บไม่ใช่ความผิดของ upstream)
+- the caller's deadline ran out → code `UPSTREAM_TIMEOUT`, status 504
 - non-2xx status → the response status, reusing the remote `code`/`message` when
   the JSON body provides them
 - success → `nil`
@@ -366,7 +369,38 @@ type IRequester interface {
 }
 ```
 
-## Client-level configuration (retries, TLS, base URL, middleware)
+## Retry
+
+ตั้งค่าผ่าน env ให้ client ที่ใช้ร่วมกันลองใหม่เอง:
+
+```
+HTTP_RETRY_COUNT=2            # default 0 = ไม่ retry
+HTTP_RETRY_WAIT_MS=200        # รอครั้งแรก แล้วเพิ่มสองเท่า
+HTTP_RETRY_MAX_WAIT_MS=2000   # เพดานการรอต่อครั้ง
+```
+
+retry แค่สิ่งที่ลองใหม่แล้วอาจเปลี่ยนผล — connection พัง, `429`, `5xx` — และ**เฉพาะ request
+ที่ทำซ้ำได้โดยไม่เสียหาย**: method idempotent (`GET`/`HEAD`/`OPTIONS`/`PUT`/`DELETE`)
+หรือ request ที่ติด header `Idempotency-Key` `POST` ธรรมดาไม่ถูก retry เพราะการส่งซ้ำอาจ
+สร้าง order ใบที่สอง `Retry-After` จาก upstream ถูกเคารพแทน backoff ของเราเอง
+
+สำหรับงานที่ไม่ใช่ HTTP หรืออยากคุมเองทีละจุด ใช้ `core.Retry`:
+
+```go
+err := core.Retry(ctx, core.RetryPolicy{Attempts: 5, Base: 200 * time.Millisecond}, func(attempt int) error {
+    return publishToPartner(ctx, order)
+})
+```
+
+- exponential backoff + **full jitter** โดย default (`NoJitter` สำหรับเทสที่ assert เวลา)
+  — ร้อย worker ที่ชน outage เดียวกันต้องไม่ตื่นพร้อมกัน
+- หยุดเมื่อ `ctx` จบ, เมื่อ `RetryIf` บอกว่าไม่คุ้ม, หรือเมื่อ fn คืน `core.RetryStop(err)`
+  (ความล้มเหลวถาวร: 400 จาก upstream, payload decode ไม่ได้)
+- error ที่พก `WithRetryAfter` (เช่น 429 ของ Slack) จะถูกรอตามนั้นแทน backoff;
+  อ่านค่าด้วย `core.RetryAfterOf(err)`
+- คืน error สุดท้ายตามที่ fn คืนมา — `IError` ยังเป็น `IError`
+
+## Client-level configuration (TLS, base URL, middleware)
 
 Configure the shared resty client once at startup and wire it in:
 

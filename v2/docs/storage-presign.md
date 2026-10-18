@@ -146,8 +146,55 @@ Three things that flow gets right:
 - **`Stat` verifies the upload actually happened**, and its size — the only size
   limit you can enforce after the fact, since the bytes never came through you.
 
-A presigned PUT cannot enforce a maximum size. If that matters, use a **POST
-policy** (which can), or accept the upload through the service.
+A presigned PUT cannot enforce a maximum size. If that matters, use a presigned
+**POST** (below), which can.
+
+## Presigned POST (browser upload with a policy)
+
+A presigned POST is an upload form instead of a URL: the browser sends the file as
+`multipart/form-data` together with the fields the service signed. What makes it
+worth the extra fields is the **policy** baked into the signature — rules the
+bucket itself enforces, so a link handed to a browser cannot be used to upload
+five gigabytes of the wrong thing:
+
+```go
+form, err := ctx.Storage().PresignPost("uploads/"+userID+"/avatar.png", 5*time.Minute,
+    core.StoragePostOptions{
+        ContentType: "image/png",   // exactly this — or ContentTypePrefix: "image/"
+        MaxSize:     2 << 20,       // 2 MB; the bucket rejects anything larger
+        Metadata:    map[string]string{"owner": userID},
+    })
+```
+
+`form.URL` is where to post and `form.Fields` are the fields to send **before the
+file** — the order matters to S3, and `file` must be last:
+
+```js
+const body = new FormData()
+for (const [k, v] of Object.entries(form.fields)) body.append(k, v)
+body.append('file', file)                      // last
+await fetch(form.url, { method: 'POST', body })   // 201 on success
+```
+
+Options:
+
+| Field | Effect |
+|---|---|
+| `ContentType` / `ContentTypePrefix` | the type the upload must declare, exactly or by prefix (`image/`) |
+| `MinSize` / `MaxSize` | body size range in bytes (`content-length-range`) |
+| `KeyPrefix` | the key becomes a folder: the client names the file and S3 fills in `${filename}` — the policy only requires the prefix |
+| `Metadata` | `x-amz-meta-*` fields the upload must carry |
+| `SuccessRedirect` | send the browser here afterwards (a plain HTML form); empty answers `201` |
+| `CacheControl`, `Public` | stored on the object, same caveats as `StoragePutOptions` |
+
+Choose POST over PUT when the uploader is a **browser you do not control**: it
+works from a plain `<form>` with no JavaScript, there is no CORS preflight to
+configure, and the size and type limits hold even if the link leaks. PUT stays the
+simpler choice for server-to-server transfers and clients you own.
+
+`NewMemoryStorage` answers the same shape, with the policy written into the
+`policy` field as plain JSON, so a test can assert on what the upload would have
+been held to without signing anything.
 
 ## Public URLs
 

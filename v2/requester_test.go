@@ -142,7 +142,33 @@ func TestRequester_bindsTheCallersContext(t *testing.T) {
 	_, err := r.Send(r.R(), http.MethodGet, srv.URL)
 
 	require.NotNil(t, err)
-	assert.Equal(t, "NETWORK_ERROR", err.GetCode())
+	assert.Equal(t, "UPSTREAM_TIMEOUT", err.GetCode(),
+		"a deadline that ran out is named as such, not as a generic transport failure")
+	assert.Equal(t, http.StatusGatewayTimeout, err.GetStatus())
+}
+
+// A caller that gave up is not a failure of the dependency, so it must not be
+// reported as a 5xx — that is how every closed browser tab becomes a Sentry
+// incident.
+func TestRequester_canceledCallerIsNotAServerError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(2 * time.Second)
+	}))
+	defer srv.Close()
+
+	app := newTestApp(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	r := Requester(app.NewContext(ctx))
+	_, err := r.Send(r.R(), http.MethodGet, srv.URL)
+
+	require.NotNil(t, err)
+	assert.Equal(t, "REQUEST_CANCELED", err.GetCode())
+	assert.Equal(t, 499, err.GetStatus(), "below 500, so the Sentry bridge leaves it alone")
 }
 
 // SetError is resty's counterpart to SetResult: the upstream's error body,
