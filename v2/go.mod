@@ -2,7 +2,7 @@ module github.com/pskclub/mine-core/v2
 
 go 1.27.0
 
-toolchain go1.27.2
+toolchain go1.27.3
 
 require (
 	firebase.google.com/go/v4 v4.22.0
