@@ -3,6 +3,7 @@ package valid
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // catalog maps machine codes to human message templates. {field} plus any keys
@@ -57,13 +58,24 @@ var catalog = map[string]string{
 	"MISMATCH":           "The {field} field does not match",
 }
 
+// catalogMu guards catalog. SetMessage is meant for init time, but a test or a
+// late-loaded module calling it while requests are being validated is a data
+// race on a map, which Go treats as fatal rather than as a stale read.
+var catalogMu sync.RWMutex
+
 // SetMessage registers or overrides the message template for a code. Call it at
 // init time (e.g. to localise or add app-specific codes used with Must).
-func SetMessage(code, template string) { catalog[code] = template }
+func SetMessage(code, template string) {
+	catalogMu.Lock()
+	defer catalogMu.Unlock()
+	catalog[code] = template
+}
 
 // render fills a message template for code with the field name and data values.
 func render(code, field string, data any) string {
+	catalogMu.RLock()
 	tmpl, ok := catalog[code]
+	catalogMu.RUnlock()
 	if !ok {
 		tmpl = "The {field} field is invalid"
 	}

@@ -148,6 +148,9 @@ opts := c.GetPageOptionsWithAllowed("created_at", "name", "status")
 page, err := repository.New[User](c).Pagination(opts)
 ```
 
+`GetPageOptionsWithAllowed()` ที่ไม่บอกชื่อ column เลย = **ไม่อนุญาตให้ client เรียงอะไรเลย**
+(`order_by` ถูกทิ้งทั้งหมด) ถ้าตั้งใจให้เรียงด้วย column จริงทุกตัวให้ใช้ `GetPageOptions()`
+
 `GetPageOptions` เปล่าๆ เหมาะกับ internal caller และ endpoint ที่ fix ลำดับไว้แล้ว
 
 **ถ้าเซ็ต `PageOptions.OrderBy` เอง ทั้งสองชั้นถูกข้าม** — GORM ได้ string อะไรก็ส่งต่อ

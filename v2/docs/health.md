@@ -138,3 +138,7 @@ readinessProbe:
 
 `readinessProbe` ควรถี่กว่าและอ่อนไหวกว่า: ถอดออกจาก rotation แล้วใส่กลับ ถูกกว่า
 restart มาก
+
+probe ที่ยิงทุกห้าวินาทีคือส่วนใหญ่ของ log ใน service ที่เงียบ ตั้ง
+`APP_LOG_REQUEST_SKIP_PATHS=/healthz,/readyz` เพื่อไม่เขียน access line ของมันเมื่อตอบ 200 —
+ครั้งที่ตอบ 503 ยังถูก log เสมอ (ดู [Middleware](./middleware.md))

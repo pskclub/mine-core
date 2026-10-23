@@ -49,6 +49,25 @@ func TestHTTP_devMessage_wrappedError(t *testing.T) {
 	assert.Equal(t, driverErr, body["message"])
 }
 
+// A repository failure answers with the database sentinel's message outside
+// dev — never with the "repository" label it was wrapped under.
+func TestHTTP_repositoryFailureAnswersWithTheSentinel(t *testing.T) {
+	app := newEnvHTTPApp(t, "prod")
+	e := NewHTTPServer(app, nil)
+	dbErr := New(http.StatusInternalServerError, "DATABASE_ERROR", "database internal error")
+	e.GET("/boom", func(c IHTTPContext) error {
+		err := WrapAs(errors.New(driverErr), dbErr, "repository")
+		return c.NewError(err, err)
+	})
+
+	rec := doJSON(e, http.MethodGet, "/boom", "")
+	body := errBody(t, rec.Body.Bytes())
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, "DATABASE_ERROR", body["code"])
+	assert.Equal(t, "database internal error", body["message"])
+}
+
 // Outside dev the same error must expose nothing but its own message.
 func TestHTTP_devMessage_hiddenOutsideDev(t *testing.T) {
 	for _, env := range []string{"prod", "test", ""} {

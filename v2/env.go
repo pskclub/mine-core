@@ -47,6 +47,14 @@ type ENVConfig struct {
 	// LOG_SOURCE is the same: it defaults to *true* and adds the file:line that
 	// wrote each line (see wantSource).
 
+	// LogRequestSkipPaths drops the access line for these request paths when
+	// the response was a success — a comma-separated list, exact match, or a
+	// prefix when the entry ends in "*" ("/healthz,/readyz,/metrics,/_dev/*").
+	// A probe hitting every few seconds is the bulk of a quiet service's log
+	// and says nothing; a probe that *fails* still gets its line, because that
+	// is the one worth reading. HTTPOptions.SkipRequestLogPaths overrides it.
+	LogRequestSkipPaths string `koanf:"log_request_skip_paths"`
+
 	// HTTPLogLevel overrides how much of the *outgoing* HTTP traffic is logged,
 	// independently of LOG_LEVEL: "silent" (nothing), "error", "warn" (slow calls
 	// and failures — the default), "info"/"debug" (every call).
@@ -55,6 +63,17 @@ type ENVConfig struct {
 	// and truncated. Off by default: a body carries credentials and personal
 	// data, and is the easiest way to turn a log store into a place secrets live.
 	HTTPLogBody bool `koanf:"http_log_body"`
+	// HTTPRetryCount makes the shared Requester retry a failed outgoing call
+	// this many more times. Zero (the default) retries nothing: a retry repeats
+	// the request, so it is for an API that is safe to repeat. Only transport
+	// failures, 429 and 5xx answers are retried, and only for idempotent
+	// methods (GET, HEAD, OPTIONS, PUT, DELETE) or a request carrying an
+	// Idempotency-Key header. Retry-After is honoured.
+	HTTPRetryCount int `koanf:"http_retry_count"`
+	// HTTPRetryWaitMS is the first wait between retries in milliseconds
+	// (default 200), doubling each time up to HTTPRetryMaxWaitMS (default 2000).
+	HTTPRetryWaitMS    int `koanf:"http_retry_wait_ms"`
+	HTTPRetryMaxWaitMS int `koanf:"http_retry_max_wait_ms"`
 
 	Host    string `koanf:"host"`
 	ENV     string `koanf:"env"`
@@ -209,6 +228,10 @@ type ENVConfig struct {
 	EmailAuth string `koanf:"email_auth"`
 	// EmailTimeout bounds one delivery, in seconds (default 30).
 	EmailTimeout int `koanf:"email_timeout"`
+	// EmailRetryCount retries a send that failed at the connection or the
+	// SMTP conversation this many more times, with backoff. Zero (the default)
+	// sends once; a message the server rejected outright is not retried.
+	EmailRetryCount int `koanf:"email_retry_count"`
 
 	FirebaseCredential string `koanf:"firebase_credential"`
 
@@ -223,6 +246,12 @@ type ENVConfig struct {
 	ChatSlackChannel string `koanf:"chat_slack_channel"`
 	// ChatSlackTimeout bounds one post, in seconds (default 10).
 	ChatSlackTimeout int `koanf:"chat_slack_timeout"`
+	// ChatSlackRetries is how many times a post that Slack rate-limited (429)
+	// is tried again, waiting what Retry-After says (default 2; 0 disables).
+	// A wait longer than ChatSlackRetryMaxWait seconds is not waited for: the
+	// 429 is returned instead.
+	ChatSlackRetries      *int `koanf:"chat_slack_retries"`
+	ChatSlackRetryMaxWait int  `koanf:"chat_slack_retry_max_wait"`
 
 	// Language model. AI_PROVIDER and AI_MODEL are the two that matter: with
 	// either missing the model is disabled and every generation fails with
@@ -298,6 +327,13 @@ type ENVConfig struct {
 type env struct {
 	k      *koanf.Koanf
 	config *ENVConfig
+}
+
+// emptyENV is the environment of a process that loaded nothing: every key
+// unset, every typed field zero. NewApp substitutes it for a nil IENV so no
+// accessor has to check for one.
+func emptyENV() IENV {
+	return &env{k: koanf.New("."), config: &ENVConfig{}}
 }
 
 // NewEnv loads configuration from the current directory (.env, or test.env when

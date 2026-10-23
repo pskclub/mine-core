@@ -189,6 +189,13 @@ mail ไม่ degrade เงียบๆ: password reset ที่ถูกท�
 | `MAIL_NO_TEMPLATES` | เรียก `SendTemplate` โดยไม่ได้ลงทะเบียน template |
 | `MAILER_DISABLED` | ไม่ได้ตั้ง `EMAIL_SERVER` |
 
+## Retry
+
+`EMAIL_RETRY_COUNT=2` (หรือ `core.WithMailRetries(2)`) ส่งซ้ำพร้อม backoff เมื่อ **ต่อ
+ไม่ติดหรือ SMTP ตอบ 4xx** (ชั่วคราว) ฉบับที่ server ปฏิเสธด้วย 5xx — ผู้รับผิด ผู้ส่งไม่ได้รับ
+อนุญาต — ไม่ถูกส่งซ้ำเพราะจะโดนปฏิเสธแบบเดิม default คือ 0 = ส่งครั้งเดียว แต่ละครั้งมี
+`EMAIL_TIMEOUT` ของตัวเอง และทั้งหมดจบเมื่อ context ที่ผูกไว้จบ
+
 ## Interface
 
 ```go

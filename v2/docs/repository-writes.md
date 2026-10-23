@@ -24,10 +24,12 @@ parameter limit:
 err := users.CreateInBatches(rows, 500)
 ```
 
-A unique-constraint collision comes back as a `DATABASE_ERROR` carrying the
-driver's message. When the collision is a real answer — "this email is already
-registered" — check for it before or catch it after, but do not let it reach the
-client as a 500:
+A unique-constraint collision comes back as **409 `DUPLICATE_KEY`**
+(`errmsgs.DuplicateKey`; `errors.Is(err, gorm.ErrDuplicatedKey)` is true), the same
+answer the Mongo layer gives. A foreign-key violation is 409 `FOREIGN_KEY_VIOLATED`
+and a check constraint 400 `CHECK_CONSTRAINT_VIOLATED`. When the collision is a
+real answer — "this email is already registered" — you may still want your own
+code and message for it, checked before or mapped after:
 
 ```go
 exists, err := users.Where("email = ?", email).Exists()

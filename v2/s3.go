@@ -90,6 +90,43 @@ type StoragePresignOptions struct {
 	ContentType string
 }
 
+// StoragePostOptions is the policy a presigned POST enforces. Every field is
+// optional; a zero value signs an upload of exactly key with no size limit.
+type StoragePostOptions struct {
+	// ContentType the upload must declare, exactly. Leave it empty and set
+	// ContentTypePrefix to accept a family ("image/").
+	ContentType string
+	// ContentTypePrefix accepts any Content-Type starting with it.
+	ContentTypePrefix string
+	// MinSize and MaxSize bound the body in bytes. The bucket rejects an upload
+	// outside the range, which is the point: the service never sees it.
+	MinSize int64
+	MaxSize int64
+	// KeyPrefix lets the client choose the final key as long as it starts with
+	// the key the form was signed for — the key becomes a folder, and the
+	// client fills in the file name (S3 substitutes "${filename}").
+	KeyPrefix bool
+	// Metadata becomes x-amz-meta-* fields the upload must carry.
+	Metadata map[string]string
+	// CacheControl is stored on the object.
+	CacheControl string
+	// Public marks the object world-readable. Same caveat as StoragePutOptions.
+	Public bool
+	// SuccessRedirect sends the browser here after the upload, for a plain
+	// HTML form. Empty answers 201 with an XML body instead.
+	SuccessRedirect string
+}
+
+// StoragePostForm is what a browser needs to upload with a presigned POST: the
+// URL to post to and the fields to send before the file.
+//
+// The field order matters to S3: every field, then "file" last. A client that
+// appends the file first gets a confusing 400.
+type StoragePostForm struct {
+	URL    string
+	Fields map[string]string
+}
+
 // IStorage is object storage (S3-compatible: AWS S3, MinIO, R2, Spaces).
 //
 // ctx.Storage() returns a handle bound to the request context, so methods take
@@ -132,6 +169,12 @@ type IStorage interface {
 	// can upload straight to the bucket instead of through the service. The
 	// client must send the same Content-Type the link was signed with.
 	PresignPut(key string, ttl time.Duration, opts ...StoragePutOptions) (string, IError)
+	// PresignPost returns a URL and the form fields for a browser to upload
+	// with a multipart POST. Unlike PresignPut the signature carries a policy:
+	// a size range, a Content-Type (or prefix) and a key prefix the bucket
+	// itself enforces, so a link handed to a browser cannot be used to upload
+	// five gigabytes of the wrong thing.
+	PresignPost(key string, ttl time.Duration, opts ...StoragePostOptions) (*StoragePostForm, IError)
 	// PublicURL is the unsigned address of an object, from S3_PUBLIC_URL when
 	// set (a CDN) and the endpoint otherwise. It says nothing about whether the
 	// object is actually readable — that is the bucket's policy to decide.
@@ -529,11 +572,18 @@ func (s *storage) Delete(keys ...string) IError {
 		for _, key := range chunk {
 			objects = append(objects, types.ObjectIdentifier{Key: aws.String(s.Key(key))})
 		}
-		_, err := s.client.DeleteObjects(s.ctx, &s3.DeleteObjectsInput{
+		out, err := s.client.DeleteObjects(s.ctx, &s3.DeleteObjectsInput{
 			Bucket: aws.String(s.bucket),
 			Delete: &types.Delete{Objects: objects, Quiet: aws.Bool(true)},
 		})
 		if err == nil {
+			// the batch call answers 200 and lists the keys it could not
+			// delete (AccessDenied, say) in the body; a missing key is not
+			// among them, so anything listed is a real failure
+			if failed := firstDeleteError(out); failed != nil {
+				return s.fail("delete", aws.ToString(failed.Key), fmt.Errorf("%s: %s",
+					aws.ToString(failed.Code), aws.ToString(failed.Message)))
+			}
 			continue
 		}
 		// not every S3-compatible gateway implements the batch call
@@ -545,6 +595,15 @@ func (s *storage) Delete(keys ...string) IError {
 		}
 	}
 	return nil
+}
+
+// firstDeleteError returns the first per-key failure of a batch delete, or nil
+// when every key went.
+func firstDeleteError(out *s3.DeleteObjectsOutput) *types.Error {
+	if out == nil || len(out.Errors) == 0 {
+		return nil
+	}
+	return &out.Errors[0]
 }
 
 func (s *storage) deleteOneByOne(keys []string) IError {
@@ -632,8 +691,109 @@ func (s *storage) PresignPut(key string, ttl time.Duration, opts ...StoragePutOp
 	return req.URL, nil
 }
 
-func (s *storage) PublicURL(key string) string {
+func (s *storage) PresignPost(key string, ttl time.Duration, opts ...StoragePostOptions) (*StoragePostForm, IError) {
+	opt := firstPostOption(opts)
 	full := s.Key(key)
+	input := &s3.PutObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(full),
+	}
+	if opt.CacheControl != "" {
+		input.CacheControl = aws.String(opt.CacheControl)
+	}
+	if opt.Public {
+		input.ACL = types.ObjectCannedACLPublicRead
+	}
+
+	req, err := s.presign.PresignPostObject(s.ctx, input, func(o *s3.PresignPostOptions) {
+		o.Expires = ttl
+		o.Conditions = postConditions(full, opt)
+	})
+	if err != nil {
+		return nil, s.fail("presign", key, err)
+	}
+
+	form := &StoragePostForm{URL: req.URL, Fields: make(map[string]string, len(req.Values)+len(opt.Metadata)+4)}
+	for k, v := range req.Values {
+		form.Fields[k] = v
+	}
+	// the SDK signs the policy; the fields the policy constrains still have to
+	// be in the form, or S3 answers "policy condition failed"
+	if opt.KeyPrefix {
+		form.Fields["key"] = full + "${filename}"
+	}
+	if opt.ContentType != "" {
+		form.Fields["Content-Type"] = opt.ContentType
+	}
+	if opt.CacheControl != "" {
+		form.Fields["Cache-Control"] = opt.CacheControl
+	}
+	if opt.Public {
+		form.Fields["acl"] = string(types.ObjectCannedACLPublicRead)
+	}
+	if opt.SuccessRedirect != "" {
+		form.Fields["success_action_redirect"] = opt.SuccessRedirect
+	} else {
+		form.Fields["success_action_status"] = "201"
+	}
+	for k, v := range opt.Metadata {
+		form.Fields["x-amz-meta-"+k] = v
+	}
+	return form, nil
+}
+
+// postConditions is the policy document's extra conditions for a presigned
+// POST. The SDK adds the bucket, the exact key, the algorithm, the credential
+// and the date itself; everything a caller can relax or tighten is here.
+func postConditions(fullKey string, opt StoragePostOptions) []any {
+	var conds []any
+	if opt.KeyPrefix {
+		// the SDK's own exact-key condition is replaced by a prefix match:
+		// a policy with both would be unsatisfiable
+		conds = append(conds, []any{"starts-with", "$key", fullKey})
+	}
+	switch {
+	case opt.ContentType != "":
+		conds = append(conds, map[string]string{"Content-Type": opt.ContentType})
+	case opt.ContentTypePrefix != "":
+		conds = append(conds, []any{"starts-with", "$Content-Type", opt.ContentTypePrefix})
+	}
+	if opt.MinSize > 0 || opt.MaxSize > 0 {
+		maxSize := opt.MaxSize
+		if maxSize <= 0 {
+			maxSize = 5 << 40 // S3's own ceiling for a single object
+		}
+		conds = append(conds, []any{"content-length-range", opt.MinSize, maxSize})
+	}
+	if opt.CacheControl != "" {
+		conds = append(conds, map[string]string{"Cache-Control": opt.CacheControl})
+	}
+	if opt.Public {
+		conds = append(conds, map[string]string{"acl": string(types.ObjectCannedACLPublicRead)})
+	}
+	if opt.SuccessRedirect != "" {
+		conds = append(conds, map[string]string{"success_action_redirect": opt.SuccessRedirect})
+	} else {
+		conds = append(conds, map[string]string{"success_action_status": "201"})
+	}
+	for k, v := range opt.Metadata {
+		conds = append(conds, map[string]string{"x-amz-meta-" + k: v})
+	}
+	return conds
+}
+
+func firstPostOption(opts []StoragePostOptions) StoragePostOptions {
+	if len(opts) > 0 {
+		return opts[0]
+	}
+	return StoragePostOptions{}
+}
+
+func (s *storage) PublicURL(key string) string {
+	// escaped per segment: a space or a "#" in a file name would otherwise
+	// produce a link the browser cuts short, while the "/" between folders
+	// has to stay a "/"
+	full := escapeKeyPath(s.Key(key))
 	if s.publicURL != "" {
 		return s.publicURL + "/" + full
 	}
@@ -644,6 +804,16 @@ func (s *storage) PublicURL(key string) string {
 		return strings.TrimSuffix(base, "/") + "/" + s.bucket + "/" + full
 	}
 	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", s.bucket, s.client.Options().Region, full)
+}
+
+// escapeKeyPath percent-encodes each segment of an object key for use in a URL
+// path, keeping the separators.
+func escapeKeyPath(key string) string {
+	parts := strings.Split(key, "/")
+	for i, p := range parts {
+		parts[i] = url.PathEscape(p)
+	}
+	return strings.Join(parts, "/")
 }
 
 // ---------------------------------------------------------------------------
@@ -799,6 +969,10 @@ func (n noopStorage) PresignGet(string, time.Duration, ...StoragePresignOptions)
 
 func (n noopStorage) PresignPut(string, time.Duration, ...StoragePutOptions) (string, IError) {
 	return "", storageDisabled()
+}
+
+func (n noopStorage) PresignPost(string, time.Duration, ...StoragePostOptions) (*StoragePostForm, IError) {
+	return nil, storageDisabled()
 }
 
 func (n noopStorage) PublicURL(string) string { return "" }

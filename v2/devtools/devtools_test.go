@@ -190,12 +190,25 @@ func TestIsSecret(t *testing.T) {
 	for _, key := range []string{
 		"jwt_secret", "db_password", "cache_password", "s3_access_key",
 		"ai_api_key", "firebase_credential", "sentry_dsn", "db_connection_string",
+		// keys a service invents for itself, which the typed config knows
+		// nothing about, and the hyphenated spelling a .env sometimes carries
+		"payment_api_key", "smtp_pass", "webhook_auth", "hmac_salt", "tls_cert", "x-signing-key",
 	} {
 		assert.True(t, isSecret(key), key)
 	}
 	for _, key := range []string{"db_host", "service", "env", "s3_bucket", "log_level"} {
 		assert.False(t, isSecret(key), key)
 	}
+}
+
+// A connection URL with a password in it is a secret whatever its key is
+// called; the key alone cannot tell BROKER_URL from a hostname.
+func TestLooksLikeCredentialURL(t *testing.T) {
+	assert.True(t, looksLikeCredentialURL("amqp://guest:guest@rabbit:5672/"))
+	assert.True(t, looksLikeCredentialURL("postgres://app:s3cret@db/app?sslmode=disable"))
+	assert.False(t, looksLikeCredentialURL("https://api.example.com/v1"), "no user info")
+	assert.False(t, looksLikeCredentialURL("redis://cache:6379"), "no user info")
+	assert.False(t, looksLikeCredentialURL("ops@example.com"), "an email is not a URL")
 }
 
 // Capabilities is what makes "the cache is not caching" answerable: a service

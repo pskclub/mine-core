@@ -1097,6 +1097,13 @@ func withConfigContext(
 
 // retitle names the issue after the error code instead of "*core.Error", so the
 // Sentry issue list reads like the API's own vocabulary.
+//
+// The value is the error's message followed by the root cause's, when the root
+// is not one of ours: a repository failure is wrapped as "repository", and an
+// issue titled "DATABASE_ERROR: repository" says nothing about which of a dozen
+// database failures it was. The cause is read off the event rather than the
+// hint because the event has already been scrubbed; the client never sees any
+// of this — its message is the error's own.
 func retitle(event *sentry.Event, hint *sentry.EventHint) {
 	if event == nil || hint == nil || len(event.Exception) == 0 {
 		return
@@ -1112,9 +1119,30 @@ func retitle(event *sentry.Event, hint *sentry.EventHint) {
 	if code := ierr.GetCode(); code != "" {
 		last.Type = code
 	}
-	if msg, ok := ierr.GetMessage().(string); ok && msg != "" {
-		last.Value = msg
+	// the op names what failed better than a message written for the client
+	// ("Internal server error"), so the issue is titled with it when there is one
+	var e *Error
+	if errors.As(hint.OriginalException, &e) && e.op != "" {
+		last.Value = withRootCause(e.op, event.Exception)
+		return
 	}
+	if msg, ok := ierr.GetMessage().(string); ok && msg != "" {
+		last.Value = withRootCause(msg, event.Exception)
+	}
+}
+
+// withRootCause appends the innermost exception's value to msg, unless that
+// exception is itself a framework error (its code already names it) or msg
+// already says it. sentry-go orders the chain innermost first.
+func withRootCause(msg string, chain []sentry.Exception) string {
+	if len(chain) < 2 {
+		return msg
+	}
+	root := chain[0]
+	if root.Value == "" || strings.Contains(root.Type, "core.Error") || strings.Contains(msg, root.Value) {
+		return msg
+	}
+	return msg + ": " + root.Value
 }
 
 // parseLogStreamLevel is the floor for what reaches Sentry Logs. Unset means
@@ -1222,6 +1250,9 @@ func secretValuesOf(cfg *ENVConfig) []string {
 	candidates := []string{
 		cfg.DBPassword, cfg.DBMongoPassword, cfg.CachePassword, cfg.MQPassword,
 		cfg.JWTSecret, cfg.S3SecretKey, cfg.S3AccessKey, cfg.EmailPassword,
+		// the AI key rides in a query string for some providers (?key=…), and a
+		// Slack token in a header: both show up verbatim in URLs and messages
+		cfg.AIAPIKey, cfg.AIEmbedAPIKey, cfg.ChatSlackToken, cfg.SentryDSN,
 	}
 	out := make([]string, 0, len(candidates))
 	for _, v := range candidates {

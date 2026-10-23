@@ -472,6 +472,13 @@ func (r *Repo[D]) Update(field string, value any) (core.MongoUpdateResult, core.
 // The options carry ArrayFilters, which is what a positional "$[name]" update
 // needs to say which array elements it applies to.
 func (r *Repo[D]) Updates(values bson.M, opts ...core.MongoUpdateOptions) (core.MongoUpdateResult, core.IError) {
+	// "the first match" of no filter is whichever document the server returns
+	// first — never the one the caller had in mind. Like Delete, the forgotten
+	// filter is refused; UpdateAll is the deliberate whole-collection write.
+	if len(r.filter) == 0 {
+		return core.MongoUpdateResult{}, core.New(400, "UNSCOPED_UPDATE",
+			"mongorepo: Updates without a filter would change an arbitrary document — add a Where, or use UpdateAll")
+	}
 	return r.db.UpdateOne(r.collection, r.filter, updateDocument(values), opts...)
 }
 
@@ -524,8 +531,14 @@ func (r *Repo[D]) Delete() (int64, core.IError) {
 	return r.db.DeleteMany(r.collection, r.filter)
 }
 
-// DeleteOne removes the first match.
+// DeleteOne removes the first match. Like Delete, it refuses to run without a
+// filter: the document it would remove is whichever one the server lists
+// first.
 func (r *Repo[D]) DeleteOne() (int64, core.IError) {
+	if len(r.filter) == 0 {
+		return 0, core.New(400, "UNSCOPED_DELETE",
+			"mongorepo: DeleteOne without a filter would remove an arbitrary document — add a Where")
+	}
 	return r.db.DeleteOne(r.collection, r.filter)
 }
 

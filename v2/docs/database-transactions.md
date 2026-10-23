@@ -20,27 +20,26 @@ if err != nil {
 }
 ```
 
-> ⚠️ **`Transaction` เขียนทับ `code` ของ error ที่เกิดข้างใน** — error ที่ closure คืนออกมา
-> (ที่ไม่ใช่ not-found) ถูกห่อเป็น `DATABASE_ERROR` เสมอ **status เดิมยังอยู่** และ
-> `errors.Is` ยังใช้ได้ผ่าน cause แต่ `errmsgs.BadRequest` ที่คืนจากในนั้นจะถึง client
-> ด้วย code `DATABASE_ERROR` ไม่ใช่ `BAD_REQUEST`
->
-> ถ้า frontend branch จาก `code` ให้ตรวจเงื่อนไขทางธุรกิจ **ก่อน** เข้า transaction หรือ
-> คืนมันออกมาเป็นค่าแล้วค่อยแปลงเป็น error หลังปิด transaction:
->
-> ```go
-> var rejected core.IError
-> err := repo.Transaction(func(tx *gorm.DB) error {
->     if !canCancel(order) {
->         rejected = errmsgs.BadRequest      // เก็บไว้ แล้วสั่ง rollback
->         return errors.New("rollback")
->     }
->     ...
-> })
-> if rejected != nil {
->     return rejected                        // code เดิมครบ
-> }
-> ```
+`tx` ที่ส่งเข้า closure เป็น handle สะอาด — ไม่พก `Model` หรือ `Where` ของ repository
+ที่เรียก `Transaction` ติดมาด้วย จึงใช้กับตารางไหนก็ได้ ทั้งผ่าน `repository.NewWithDB`
+และเรียก GORM ตรงๆ (`tx.Create(&order)`)
+
+**error ที่ closure คืนออกมาถึงผู้เรียกครบทั้ง status และ code** ถ้าเป็น `core.IError`
+อยู่แล้ว (เช่น `errmsgs.BadRequest` หรือ error ของกฎธุรกิจ) จะไม่ถูกห่อเป็น `DATABASE_ERROR`
+มีแต่ error ดิบจาก driver เท่านั้นที่ถูกจัดประเภทโดย layer ฐานข้อมูล:
+
+```go
+err := repo.Transaction(func(tx *gorm.DB) error {
+    if !canCancel(order) {
+        return core.New(400, "ORDER_NOT_CANCELLABLE", "order can no longer be cancelled")
+    }
+    return repository.NewWithDB[Order](ctx, tx).Update("status", "cancelled")
+})
+// err.GetCode() == "ORDER_NOT_CANCELLABLE", status 400 — และ transaction ถูก rollback
+```
+
+> รุ่นก่อน v2.16 ห่อทุก error เป็น `DATABASE_ERROR` และ `tx` ยังพก `Model` ของ repository
+> ต้นทางอยู่ — workaround ที่เก็บ error ไว้ในตัวแปรนอก closure ไม่จำเป็นอีกต่อไป
 
 ## The rule that causes every bug
 

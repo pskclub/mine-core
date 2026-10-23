@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -28,6 +29,18 @@ type HTTPOptions struct {
 	// Nothing else is affected: breadcrumbs, Sentry Logs, error reporting and
 	// tracing are their own switches.
 	DisableRequestLog *bool
+
+	// SkipRequestLogPaths keeps the access line but not for these paths when
+	// the response is a success (below 400): the liveness probe every few
+	// seconds, a metrics scrape. Exact match, or a prefix when the entry ends
+	// in "*". Nil follows LOG_REQUEST_SKIP_PATHS; a non-nil (even empty) slice
+	// overrides the environment.
+	//
+	//	&core.HTTPOptions{SkipRequestLogPaths: []string{"/healthz", "/readyz", "/_dev/*"}}
+	//
+	// A failing probe is still logged: a 503 from /readyz is the line that
+	// explains why the pod was pulled from the service.
+	SkipRequestLogPaths []string
 
 	// BodyLimit caps how large a request body may be, in bytes. Zero takes
 	// DefaultBodyLimit; a negative value turns the cap off entirely.
@@ -137,7 +150,7 @@ func NewHTTPServer(app *App, opts *HTTPOptions) *Server {
 	// and the transaction must span the handler *and* its recovery
 	e.Use(sentryMiddleware(app))
 	if requestLogEnabled(app.env, opts) {
-		e.Use(requestLogger(app))
+		e.Use(requestLogger(app, requestLogSkipPaths(app.env, opts)))
 	}
 	e.Use(recoverMiddleware(app))
 
@@ -408,8 +421,59 @@ func requestIDContext() echo.MiddlewareFunc {
 	}
 }
 
+// requestLogSkipPaths resolves which successful requests go unlogged: the
+// option when set, LOG_REQUEST_SKIP_PATHS otherwise.
+func requestLogSkipPaths(env IENV, opts *HTTPOptions) *pathMatcher {
+	if opts != nil && opts.SkipRequestLogPaths != nil {
+		return newPathMatcher(opts.SkipRequestLogPaths)
+	}
+	if env != nil {
+		return newPathMatcher(strings.Split(env.Config().LogRequestSkipPaths, ","))
+	}
+	return newPathMatcher(nil)
+}
+
+// pathMatcher answers whether a request path is on a list: exactly, or under
+// a prefix written with a trailing "*".
+type pathMatcher struct {
+	exact    map[string]bool
+	prefixes []string
+}
+
+func newPathMatcher(entries []string) *pathMatcher {
+	m := &pathMatcher{exact: map[string]bool{}}
+	for _, e := range entries {
+		e = strings.TrimSpace(e)
+		if e == "" {
+			continue
+		}
+		if strings.HasSuffix(e, "*") {
+			m.prefixes = append(m.prefixes, strings.TrimSuffix(e, "*"))
+			continue
+		}
+		m.exact[e] = true
+	}
+	return m
+}
+
+func (m *pathMatcher) matches(path string) bool {
+	if m == nil {
+		return false
+	}
+	if m.exact[path] {
+		return true
+	}
+	for _, p := range m.prefixes {
+		if strings.HasPrefix(path, p) {
+			return true
+		}
+	}
+	return false
+}
+
 // requestLogger logs each request with method/status/latency and the request id.
-func requestLogger(app *App) echo.MiddlewareFunc {
+// A successful request on a skipped path is not logged; a failed one always is.
+func requestLogger(app *App, skip *pathMatcher) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
 			start := time.Now()
@@ -421,6 +485,9 @@ func requestLogger(app *App) echo.MiddlewareFunc {
 			// status from the error instead, or every failed request is logged
 			// as a success and the ones worth finding become invisible.
 			status := writtenStatus(c)
+			if err == nil && status < 400 && skip.matches(c.Request().URL.Path) {
+				return nil // the probe answered as it should: nothing to say
+			}
 			latency := time.Since(start)
 			fields := []any{
 				"method", c.Request().Method,

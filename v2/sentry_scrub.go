@@ -13,6 +13,17 @@ import (
 // "the field was there, we are not telling you what was in it".
 const redacted = "[redacted]"
 
+// scrubbedParams renders job parameters for a Sentry context with sensitive
+// keys masked. Params are JSON, and a JSON document attached as one string is
+// masked by value only — {"password": "…"} would reach Sentry whole — so it is
+// decoded, scrubbed field by field like any other map, and re-encoded.
+func scrubbedParams(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	return string(newScrubber(nil, nil).scrubJSON(raw))
+}
+
 // defaultScrubKeys are the key fragments whose values never leave the process.
 // v1 shipped the whole configuration to Sentry verbatim — DB password, JWT
 // secret and S3 keys included. v2 masks by default and lets you add to the list,
@@ -49,7 +60,10 @@ func newScrubber(extraKeys, secretValues []string) *scrubber {
 
 // sensitive reports whether a key's value must be masked.
 func (s *scrubber) sensitive(key string) bool {
-	k := strings.ToLower(key)
+	// headers and query parameters spell the same names with hyphens
+	// (X-Api-Key, access-token); the fragments are written with underscores,
+	// so the key is read as if it were
+	k := strings.ReplaceAll(strings.ToLower(key), "-", "_")
 	for _, frag := range s.keys {
 		if strings.Contains(k, frag) {
 			return true

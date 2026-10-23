@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/go-co-op/gocron/v2"
@@ -91,6 +92,9 @@ type Scheduler struct {
 	loc *time.Location
 	// armed keys the gocron job by name, so Start can ask each one when it
 	// next fires — the question a cron expression does not answer by itself.
+	// mu guards it and started: devtools asks for next-run times from request
+	// goroutines while Add may still be arming jobs.
+	mu    sync.RWMutex
 	armed map[string]gocron.Job
 }
 
@@ -190,7 +194,9 @@ func (sc *Scheduler) zone() string {
 
 // nextRunOf reports when a job fires next, once the scheduler is ticking.
 func (sc *Scheduler) nextRunOf(name string) (time.Time, bool) {
+	sc.mu.RLock()
 	job, ok := sc.armed[name]
+	sc.mu.RUnlock()
 	if !ok {
 		return time.Time{}, false
 	}
@@ -230,6 +236,8 @@ func (sc *Scheduler) AddByDuration(name string, d time.Duration, fn JobFunc) IEr
 // arm creates the gocron job that enqueues runs of def, once.
 func (sc *Scheduler) arm(def JobDef) IError {
 	name := def.Name
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
 	if _, ok := sc.armed[name]; ok {
 		return nil
 	}
@@ -271,7 +279,10 @@ func (sc *Scheduler) enqueue(name string) {
 // Start arms every scheduled job in the registry and begins ticking. It is
 // non-blocking. When the scheduler owns its runner, that is started too.
 func (sc *Scheduler) Start() IError {
-	if sc.started {
+	sc.mu.RLock()
+	started := sc.started
+	sc.mu.RUnlock()
+	if started {
 		return nil
 	}
 	for _, def := range sc.runner.Registry().List() {
@@ -286,7 +297,10 @@ func (sc *Scheduler) Start() IError {
 		sc.runner.Start()
 	}
 	sc.s.Start()
+	sc.mu.Lock()
 	sc.started = true
+	scheduled := len(sc.armed)
+	sc.mu.Unlock()
 
 	// after s.Start(), so the next-run times exist: the runner's job list is
 	// what carries them, and this is the moment it can be complete.
@@ -295,7 +309,7 @@ func (sc *Scheduler) Start() IError {
 	// in it, and where it comes from the process is a container with no TZ set,
 	// it is UTC — a whole cron table silently seven hours off looks exactly like
 	// a cron table that is fine.
-	sc.app.Log().Info("scheduler started", "scheduled", len(sc.armed), "timezone", sc.zone())
+	sc.app.Log().Info("scheduler started", "scheduled", scheduled, "timezone", sc.zone())
 	sc.runner.describe()
 	return nil
 }
@@ -306,7 +320,9 @@ func (sc *Scheduler) Stop() IError {
 	if err := sc.s.Shutdown(); err != nil {
 		return Wrap(err, "scheduler: stop")
 	}
+	sc.mu.Lock()
 	sc.started = false
+	sc.mu.Unlock()
 	if sc.ownsRunner {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()

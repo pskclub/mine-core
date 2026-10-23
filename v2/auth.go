@@ -181,7 +181,12 @@ func (a *Auth) middleware(required bool) echo.MiddlewareFunc {
 				return next(ec)
 			}
 
-			user.Token = token
+			// a copy, because the verifier may hand back a pointer it keeps — a
+			// cached principal, say — and stamping this request's token on a
+			// value shared across requests is a race and a leak between them
+			principal := *user
+			principal.Token = token
+			user = &principal
 			ec.Set(userContextKey, user)
 			ec.Set(tokenContextKey, token)
 			return next(ec)

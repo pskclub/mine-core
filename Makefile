@@ -9,7 +9,7 @@
 # `make help` lists the targets. `make check` is what to run before a PR.
 
 # Pinned here and in .github/workflows/ci.yml -- bump both together.
-GOLANGCI_LINT_VERSION := v2.13.2
+GOLANGCI_LINT_VERSION := v2.15.0
 GOVULNCHECK_VERSION   := latest
 
 LEVEL       ?= patch

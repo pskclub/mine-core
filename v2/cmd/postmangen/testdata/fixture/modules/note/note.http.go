@@ -19,5 +19,6 @@ func NewNoteHTTP(e *httpx.Server) {
 	e.GET("/notes", c.Pagination, middlewares.AuthRequire(e))
 	e.GET("/notes/search", c.Search)
 	e.POST("/notes", c.Create, middlewares.AuthRequire(e))
+	e.POST("/notes/drafts", c.Draft, middlewares.AuthRequire(e))
 	e.POST("/notes/:id/attachments", c.Upload, middlewares.AuthRequire(e))
 }

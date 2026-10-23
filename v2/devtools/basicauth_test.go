@@ -85,6 +85,19 @@ func TestBasicAuth_codeBeatsTheEnvironment(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, getWithLogin(s, DefaultPrefix, "ops", "from-env").Code)
 }
 
+// The password may come from the deployment while the username was written in
+// code; the username must not be thrown away with the empty password beside it.
+func TestBasicAuth_keepsTheCodeUserWhenThePasswordComesFromTheEnvironment(t *testing.T) {
+	s := newServer(t, map[string]string{
+		"ENV": "prod", "SERVICE": "svc", "DEVTOOLS_PASSWORD": "from-env",
+	})
+	require.Nil(t, Mount(s, Options{BasicAuth: &BasicAuth{User: "release-bot"}}))
+
+	assert.Equal(t, http.StatusOK, getWithLogin(s, DefaultPrefix, "release-bot", "from-env").Code)
+	assert.Equal(t, http.StatusUnauthorized, getWithLogin(s, DefaultPrefix, DefaultBasicAuthUser, "from-env").Code,
+		"the default user must not work when code named another")
+}
+
 // A lock with no key would refuse everybody, including whoever configured it,
 // and would read as a forgotten password rather than a missing one.
 func TestBasicAuth_refusesToMountWithNoPassword(t *testing.T) {

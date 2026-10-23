@@ -99,8 +99,10 @@ func (h *tapHandler) Handle(ctx context.Context, r slog.Record) error {
 		for _, a := range h.attrs {
 			putAttr(entry.Attrs, a)
 		}
+		// the record's own attributes sit inside the open group, as the JSON
+		// handler nests them; pinned ones were prefixed when they were added
 		r.Attrs(func(a slog.Attr) bool {
-			putAttr(entry.Attrs, a)
+			putAttr(entry.Attrs, h.grouped(a))
 			return true
 		})
 	}
@@ -113,15 +115,34 @@ func (h *tapHandler) Handle(ctx context.Context, r slog.Record) error {
 func (h *tapHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	out := *h
 	out.inner = h.inner.WithAttrs(attrs)
-	out.attrs = append(append([]slog.Attr(nil), h.attrs...), attrs...)
+	out.attrs = append([]slog.Attr(nil), h.attrs...)
+	for _, a := range attrs {
+		out.attrs = append(out.attrs, h.grouped(a))
+	}
 	return &out
 }
 
 func (h *tapHandler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h // slog: an empty group name is a no-op
+	}
 	out := *h
 	out.inner = h.inner.WithGroup(name)
-	out.group = name
+	if h.group != "" {
+		out.group = h.group + "." + name
+	} else {
+		out.group = name
+	}
 	return &out
+}
+
+// grouped places a under the handler's open group, so a tap reads "http.status"
+// for what the JSON output writes as {"http": {"status": …}}.
+func (h *tapHandler) grouped(a slog.Attr) slog.Attr {
+	if h.group == "" {
+		return a
+	}
+	return slog.Attr{Key: h.group + "." + a.Key, Value: a.Value}
 }
 
 // putAttr flattens one attribute. A group becomes "group.key" rather than a

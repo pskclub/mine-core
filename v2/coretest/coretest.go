@@ -145,19 +145,47 @@ func NewDB(t *testing.T, opts ...Option) *gorm.DB {
 	return open(t, cfg)
 }
 
+// writeEnvFile writes values as the env file core.NewEnvPath reads from dir —
+// test.env when the process runs with APP_ENV=test, .env otherwise, which is
+// the same choice the loader makes.
+func writeEnvFile(dir string, values map[string]string) error {
+	name := ".env"
+	if os.Getenv("APP_ENV") == "test" {
+		name = "test.env"
+	}
+	keys := make([]string, 0, len(values))
+	for k := range values {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var b strings.Builder
+	for _, k := range keys {
+		// no APP_ prefix: the file is keyed bare (DB_HOST=…) and only the
+		// process environment carries the prefix — see docs/env.md.
+		// Double-quoted so a value with a space or a "#" survives the parser.
+		v := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(values[k])
+		fmt.Fprintf(&b, "%s=\"%s\"\n", strings.ToUpper(k), v)
+	}
+	return os.WriteFile(filepath.Join(dir, name), []byte(b.String()), 0o600)
+}
+
 func newApp(t *testing.T, opts ...Option) (*core.App, *config) {
 	t.Helper()
 
 	cfg := newConfig(opts...)
 	db := open(t, cfg)
 
-	for k, v := range cfg.env {
-		t.Setenv("APP_"+strings.ToUpper(k), v)
+	// the fixture's configuration goes into an env file in a directory of its
+	// own, not into the process environment: t.Setenv is forbidden after
+	// t.Parallel(), and a test suite that cannot run in parallel is a slow one.
+	// The directory is otherwise empty, so a stray .env in the checkout cannot
+	// change what the tests see. APP_* variables already in the process still
+	// win over the file, as they do for a real service.
+	dir := t.TempDir()
+	if err := writeEnvFile(dir, cfg.env); err != nil {
+		t.Fatalf("coretest: env file: %v", err)
 	}
-
-	// an empty directory: configuration comes from the environment above, so a
-	// stray .env in the checkout cannot change what the tests see
-	env, err := core.NewEnvPath(t.TempDir())
+	env, err := core.NewEnvPath(dir)
 	if err != nil {
 		t.Fatalf("coretest: env: %v", err)
 	}
@@ -257,6 +285,9 @@ func gormConfig(cfg *config) *gorm.Config {
 	return &gorm.Config{
 		SkipDefaultTransaction: cfg.skipDefault,
 		Logger:                 gormSilent(),
+		// as core.NewDatabase opens it: a duplicate key is a 409 in the test
+		// exactly as it is in the service
+		TranslateError: true,
 	}
 }
 

@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"unicode/utf8"
 
 	core "github.com/pskclub/mine-core/v2"
 )
@@ -308,6 +309,11 @@ func unwrapJSON(s string) string {
 func truncate(s string, n int) string {
 	if len(s) <= n {
 		return s
+	}
+	// never inside a rune: a reply in Thai cut at a byte boundary would end
+	// in a broken character
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
 	}
 	return s[:n] + "…"
 }

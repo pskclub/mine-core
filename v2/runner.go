@@ -47,6 +47,14 @@ type Runner struct {
 
 	mu      sync.Mutex
 	stopped bool
+	// cancel ends the wait inside RunContext. Without it Stop could tear
+	// everything down while a process with no HTTP server — jobs or consumers
+	// only — stayed blocked on a context nothing would ever cancel.
+	cancel context.CancelFunc
+	// done is closed once shutdown has finished, so a Stop that arrives while
+	// another caller is already shutting down waits for the result instead of
+	// returning before the process has actually stopped.
+	done chan struct{}
 }
 
 // RunnerService is anything else with a start and a stop — a gRPC server, a
@@ -173,6 +181,12 @@ func (r *Runner) Run() error {
 // process whose shutdown is triggered by something other than a signal.
 func (r *Runner) RunContext(ctx context.Context) error {
 	log := r.app.Log()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	r.mu.Lock()
+	r.cancel = cancel
+	r.mu.Unlock()
 
 	if err := r.start(); err != nil {
 		// something failed to start: stop whatever did, so a partial start does
@@ -359,11 +373,18 @@ func (r *Runner) serveHTTP(ctx context.Context, log ILogger) error {
 func (r *Runner) shutdown(log ILogger) error {
 	r.mu.Lock()
 	if r.stopped {
+		done := r.done
 		r.mu.Unlock()
+		if done != nil {
+			<-done
+		}
 		return nil
 	}
 	r.stopped = true
+	r.done = make(chan struct{})
+	done := r.done
 	r.mu.Unlock()
+	defer close(done)
 
 	var firstErr error
 	fail := func(err error) {
@@ -433,7 +454,17 @@ func (r *Runner) shutdown(log ILogger) error {
 
 // Stop triggers the shutdown from outside Run — for a test, or a service that
 // decides to stop itself.
-func (r *Runner) Stop() error { return r.shutdown(r.app.Log()) }
+func (r *Runner) Stop() error {
+	r.mu.Lock()
+	cancel := r.cancel
+	r.mu.Unlock()
+	if cancel != nil {
+		// wake RunContext first: it then runs the same shutdown and returns,
+		// which is what a caller that said "stop" expects of Run
+		cancel()
+	}
+	return r.shutdown(r.app.Log())
+}
 
 // isServerClosed reports whether the listener stopped because it was asked to,
 // rather than because something went wrong. A cancelled context is the ordinary

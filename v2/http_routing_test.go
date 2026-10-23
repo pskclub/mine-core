@@ -160,3 +160,51 @@ func TestHTTP_requestLogCanBeDisabled(t *testing.T) {
 		})
 	}
 }
+
+// A probe every few seconds is most of a quiet service's log and says nothing
+// — until it fails, when it is the one line worth reading. So a skipped path
+// loses its access line only while it answers with a success.
+func TestHTTP_requestLogSkipsHealthyProbes(t *testing.T) {
+	cases := []struct {
+		name string
+		env  map[string]string
+		opts *HTTPOptions
+	}{
+		{"by env", map[string]string{"LOG_REQUEST_SKIP_PATHS": "/healthz, /readyz,/_dev/*"}, nil},
+		{"by option", nil, &HTTPOptions{SkipRequestLogPaths: []string{"/healthz", "/readyz", "/_dev/*"}}},
+		{"option beats env", map[string]string{"LOG_REQUEST_SKIP_PATHS": "/users"},
+			&HTTPOptions{SkipRequestLogPaths: []string{"/healthz", "/readyz", "/_dev/*"}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var out strings.Builder
+			env := mustEnv(t, tc.env)
+			app, err := NewApp(env, WithLogger(NewLoggerTo(&out, env)))
+			require.NoError(t, err)
+
+			e := NewHTTPServer(app, tc.opts)
+			ready := true
+			e.GET("/healthz", func(c IHTTPContext) error { return c.JSON(http.StatusOK, "ok") })
+			e.GET("/readyz", func(c IHTTPContext) error {
+				if !ready {
+					return New(http.StatusServiceUnavailable, "NOT_READY", "database down")
+				}
+				return c.JSON(http.StatusOK, "ok")
+			})
+			e.GET("/_dev/routes", func(c IHTTPContext) error { return c.JSON(http.StatusOK, "ok") })
+			e.GET("/users", func(c IHTTPContext) error { return c.JSON(http.StatusOK, "ok") })
+
+			for _, p := range []string{"/healthz", "/readyz", "/_dev/routes", "/users"} {
+				e.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, p, nil))
+			}
+			assert.NotContains(t, out.String(), "GET /healthz 200", "a healthy probe is noise")
+			assert.NotContains(t, out.String(), "GET /readyz 200")
+			assert.NotContains(t, out.String(), "GET /_dev/routes 200", "a trailing * skips the prefix")
+			assert.Contains(t, out.String(), "GET /users 200", "everything else is still logged")
+
+			ready = false
+			e.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/readyz", nil))
+			assert.Contains(t, out.String(), "GET /readyz 503", "a failing probe is the line that explains the outage")
+		})
+	}
+}

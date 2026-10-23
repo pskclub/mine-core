@@ -68,7 +68,7 @@ func (r *JobRunner) beginJobTrace(ctx context.Context, run *JobRun, def JobDef) 
 		"max_attempts": run.MaxAttempts,
 		"scheduled_at": run.ScheduledAt,
 		"triggered_by": run.TriggeredBy,
-		"params":       string(run.Params),
+		"params":       scrubbedParams(run.Params),
 		"timeout":      def.timeout().String(),
 	})
 

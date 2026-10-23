@@ -32,8 +32,10 @@ limiter that turns into a ban. One atomic operation is the fix.
 
 ## A fixed-window limiter
 
-Middleware runs on `*echo.Context`, so it takes the `*core.App` to reach the
-cache (see [Middleware](./middleware.md)):
+The framework ships this as `core.RateLimit(cache, limit, window)` — with the
+`X-RateLimit-*` headers, `Retry-After` and a per-route key (see
+[Middleware](./middleware.md)). This is what it does inside, kept here because
+the two decisions below are the ones to copy into any limiter of your own:
 
 ```go
 func RateLimit(app *core.App, limit int64, window time.Duration) echo.MiddlewareFunc {

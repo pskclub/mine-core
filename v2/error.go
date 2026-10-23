@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // IError is the structured error returned by every mine-core layer. It keeps the
@@ -39,11 +40,37 @@ type Error struct {
 	Data    interface{} `json:"-"`
 	Fields  interface{} `json:"fields,omitempty"`
 
+	// op labels what failed ("repository"), set by WrapAs. It is for whoever
+	// reads the log or the Sentry issue, never the client: Message is what a
+	// response carries, and a label like this tells a user nothing.
+	op    string
 	cause error
 	stack []uintptr
 	// eventID is the Sentry event this error was reported as, set the moment it
 	// is captured so no layer above reports the same failure twice.
 	eventID string
+	// retryAfter is how long the other side asked us to wait (a 429's
+	// Retry-After), for Retry to honour instead of its own backoff.
+	retryAfter time.Duration
+}
+
+// WithRetryAfter records how long the caller should wait before trying again
+// — what a 429 or a 503 said in Retry-After. Retry reads it through
+// RetryAfterOf and waits exactly that long.
+func (e *Error) WithRetryAfter(d time.Duration) *Error {
+	c := e.clone()
+	c.retryAfter = d
+	return c
+}
+
+// RetryAfterOf reports the wait an error carries, if any *Error in its chain
+// was given one with WithRetryAfter.
+func RetryAfterOf(err error) (time.Duration, bool) {
+	var e *Error
+	if errors.As(err, &e) && e.retryAfter > 0 {
+		return e.retryAfter, true
+	}
+	return 0, false
 }
 
 // compile-time guarantee that *Error satisfies IError.
@@ -74,6 +101,10 @@ func Newf(status int, code string, format string, args ...interface{}) *Error {
 // Wrap turns any error into an *Error (500 by default) without ever panicking.
 // If err already is (or wraps) an *Error, that error is returned enriched with
 // the extra message so the original status/code/fields are preserved.
+//
+// message becomes the error's Message, which is what a response carries. For
+// a failure a client should read as one of the errmsgs sentinels, with the
+// label kept for the log only, use WrapAs.
 func Wrap(err error, message string) *Error {
 	if err == nil {
 		return nil
@@ -108,6 +139,27 @@ func wrap(err error, message string, stack []uintptr) *Error {
 		return &clone
 	}
 
+	// an IError of another type — valid.Errors, say — already knows its status
+	// and code; turning it into a 500 because it is not *Error would report a
+	// client's bad input as a server fault
+	var foreign IError
+	if errors.As(err, &foreign) {
+		out := &Error{
+			Status:  foreign.GetStatus(),
+			Code:    foreign.GetCode(),
+			Message: foreign.GetMessage(),
+			cause:   err,
+			stack:   stack,
+		}
+		if message != "" {
+			out.Message = message + ": " + fmt.Sprint(foreign.GetMessage())
+		}
+		if f, ok := foreign.(interface{ GetFields() any }); ok {
+			out.Fields = f.GetFields()
+		}
+		return out
+	}
+
 	return &Error{
 		Status:  http.StatusInternalServerError,
 		Code:    "INTERNAL_SERVER_ERROR",
@@ -115,6 +167,29 @@ func wrap(err error, message string, stack []uintptr) *Error {
 		cause:   err,
 		stack:   stack,
 	}
+}
+
+// WrapAs reports err as the error as — its status, code and message, which is
+// what a client reads — and keeps op, a label for what failed ("repository"),
+// for the log and the Sentry issue only (see Op).
+//
+// It is for a failure the client can do nothing about and should not be told
+// the internals of: Wrap(err, "repository") would answer "repository", a label
+// for a developer that means nothing to a user.
+//
+//	return core.WrapAs(err, errmsgs.DBError, "repository")
+func WrapAs(err error, as *Error, op string) *Error {
+	if err == nil {
+		return nil
+	}
+	if as == nil {
+		as = InternalServerError()
+	}
+	out := as.clone()
+	out.op = op
+	out.cause = err
+	out.stack = captureStack(1)
+	return out
 }
 
 // From converts any error to an *Error using errors.As (never panics). Errors
@@ -195,8 +270,15 @@ func (e *Error) clone() *Error {
 // --- IError implementation ---
 
 func (e *Error) Error() string {
+	if e.op != "" {
+		return fmt.Sprintf("%s: code: %s message: %v", e.op, e.Code, e.Message)
+	}
 	return fmt.Sprintf("code: %s message: %v", e.Code, e.Message)
 }
+
+// Op returns the label WrapAs put on the error — what failed. Empty for an
+// error built any other way.
+func (e *Error) Op() string { return e.op }
 
 func (e *Error) GetCode() string { return e.Code }
 

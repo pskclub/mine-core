@@ -321,9 +321,37 @@ if v, _ := d.Headers["schema"].(int32); v > 2 {
 
 ### Unit — ไม่ต้องมี broker
 
-`IMQ` เป็น interface ธรรมดา service ที่รับ `IContext` จึงทดสอบได้ด้วยตัวปลอมเล็กๆ ที่
-บันทึกสิ่งที่ถูก publish (v2 ยังไม่มี in-memory MQ มาให้เหมือน cache/storage — เขียนเองสิบ
-บรรทัดตามที่ test ต้องรู้จริงๆ):
+v2 มี **broker ในหน่วยความจำ** มาให้เหมือน cache/storage: `core.NewMemoryMQ()` เป็น
+`IMQ` เต็มตัว — exchange ทุก kind (direct/fanout/topic/headers), queue, binding,
+dead-letter, TTL, `MaxLength` — และ `app.NewMQConsumer()` จะคืน consumer ที่อ่านจาก
+broker ตัวนี้เองเมื่อ App ถูกสร้างด้วย `WithMQ(memoryMQ)` ดังนั้น wiring ของ service
+(`OnQueue`, `Start`, `Requeue`, DLQ) ถูกทดสอบจริงโดยไม่ต้องมี RabbitMQ:
+
+```go
+mq := core.NewMemoryMQ()
+ctx := coretest.NewContext(t, coretest.WithAppOptions(core.WithMQ(mq)))
+
+c := ctx.App().NewMQConsumer()
+c.OnQueue(orderQueue, handleOrder)          // topology เดียวกับ production
+require.Nil(t, c.Start())
+t.Cleanup(func() { _ = c.Stop(context.Background()) })
+
+require.Nil(t, ctx.MQ().Publish("events", "order.created", order))
+
+assert.Eventually(t, func() bool { return len(mq.Messages("orders")) == 0 },
+    time.Second, 10*time.Millisecond, "handler ต้อง ack ภายในหนึ่งวินาที")
+assert.Len(t, mq.Messages("orders.dead"), 0, "ไม่มีอะไรหลุดไป DLQ")
+
+published := mq.Published()                 // ทุก Publish ไม่ว่ามี queue รับหรือไม่
+assert.Equal(t, "order.created", published[0].Key)
+```
+
+`Messages(queue)` คือสิ่งที่รออยู่ใน queue (ยังไม่ถูก consume หรือถูก `Requeue` กลับมา),
+`Published()` คือบันทึกทุก publish พร้อมรายชื่อ queue ที่มันไปถึง, `Reset()` ล้างข้อความ
+ทิ้งแต่เก็บ topology ไว้ ข้อความที่ handler คืน error ไปโผล่ที่ `DeadLetterExchange`
+พร้อม header `x-first-death-reason` เหมือนที่ RabbitMQ เขียน
+
+ถ้าต้องการแค่ "ถูก publish หรือเปล่า" ตัวปลอมสิบบรรทัดก็ยังใช้ได้:
 
 ```go
 type recordingMQ struct {

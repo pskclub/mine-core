@@ -479,13 +479,34 @@ func (b *memoryBroker) publish(ctx context.Context, channel string, payload []by
 			Pattern: s.strip(pattern),
 			Payload: append([]byte(nil), payload...),
 		}
-		select {
-		case s.ch <- msg:
-		case <-s.done:
-		case <-ctx.Done():
+		if !s.deliver(ctx, msg) {
 			return
 		}
 	}
+}
+
+// deliver hands msg to the subscriber, or gives up when the subscription or
+// the publisher's context ends first. It reports false only for the latter:
+// a closed subscription is that subscriber's business, not the publisher's.
+//
+// The read lock is what keeps this from sending on a closed channel: Close
+// takes the write lock before closing ch, so no send is in flight at that
+// moment, and the closed flag turns away a publisher that arrives afterwards.
+// A publisher blocked on a full buffer still holds the read lock, which is why
+// Close signals done before it asks for the write lock.
+func (s *memorySubscription) deliver(ctx context.Context, msg *PubSubMessage) bool {
+	s.sendMu.RLock()
+	defer s.sendMu.RUnlock()
+	if s.closed {
+		return true
+	}
+	select {
+	case s.ch <- msg:
+	case <-s.done:
+	case <-ctx.Done():
+		return false
+	}
+	return true
 }
 
 type memorySubscription struct {
@@ -494,6 +515,10 @@ type memorySubscription struct {
 	done     chan struct{}
 	closeOne sync.Once
 	prefix   string
+
+	// sendMu orders deliveries against Close — see deliver.
+	sendMu sync.RWMutex
+	closed bool
 
 	mu       sync.Mutex
 	channels []string
@@ -549,9 +574,14 @@ func (s *memorySubscription) Channels() []string {
 
 func (s *memorySubscription) Close() IError {
 	s.closeOne.Do(func() {
+		// done first: it releases any publisher blocked on a full buffer, and
+		// that publisher holds the read lock the next line waits for
 		close(s.done)
 		s.broker.remove(s)
+		s.sendMu.Lock()
+		s.closed = true
 		close(s.ch)
+		s.sendMu.Unlock()
 	})
 	return nil
 }

@@ -169,6 +169,11 @@ func (c *httpContext) BindOnly(payload any) IError {
 	if err := echo.BindQueryParams(c.Context, payload); err != nil {
 		return bindError(err)
 	}
+	// headers too (`header:` tag): the field-source labels already name them
+	// as a source, so a validation error on one is reported as "header"
+	if err := echo.BindHeaders(c.Context, payload); err != nil {
+		return bindError(err)
+	}
 	return c.bindBody(payload)
 }
 
@@ -280,8 +285,15 @@ func (c *httpContext) GetPageOptions() *PageOptions {
 
 // GetPageOptionsWithAllowed is GetPageOptions restricted to an order-by allowlist
 // (protects against SQL injection through order_by).
+//
+// No column at all means no ordering from the client: a call that named
+// nothing has allowed nothing, which is the reading its name promises. For
+// "any column" use GetPageOptions.
 func (c *httpContext) GetPageOptionsWithAllowed(allowed ...string) *PageOptions {
 	opts := c.GetPageOptions()
+	if allowed == nil {
+		allowed = []string{}
+	}
 	opts.OrderBy = parseOrderBy(c.QueryParam("order_by"), allowed)
 	return opts
 }

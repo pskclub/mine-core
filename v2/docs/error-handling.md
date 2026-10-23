@@ -153,11 +153,11 @@ ctx.Log().Error("ดึงเรตไม่ได้ ใช้เรตเก�
 
 ```jsonc
 // ENV=dev
-{ "code": "DATABASE_ERROR",
+{ "code": "DUPLICATE_KEY",
   "message": "ERROR: duplicate key value violates unique constraint \"users_email_key\"" }
 
 // ENV อื่น (รวมถึงไม่ได้ตั้ง) — ใช้ message ของ error type เท่านั้น
-{ "code": "DATABASE_ERROR", "message": "repository" }
+{ "code": "DUPLICATE_KEY", "message": "a record with the same unique value already exists" }
 ```
 
 - ใช้กับ error ที่ **มี cause** เท่านั้น — validation error กับ sentinel ที่ไม่มี cause

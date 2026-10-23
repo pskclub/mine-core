@@ -381,6 +381,101 @@
         ]
       }
     },
+    "/notes/drafts": {
+      "post": {
+        "tags": [
+          "note"
+        ],
+        "summary": "POST /notes/drafts",
+        "description": "Handled by `NoteHandler.Draft`.",
+        "operationId": "NoteHandlerDraft",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "body": "string",
+                "title": "Sample title"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "pinned": {
+                      "type": "boolean"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "user_id": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "body": "string",
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "pinned": true,
+                  "title": "Sample title",
+                  "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/notes/search": {
       "get": {
         "tags": [

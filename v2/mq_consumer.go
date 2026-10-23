@@ -160,6 +160,15 @@ func (a *App) NewMQConsumer(opts ...MQConsumerOption) IMQConsumer {
 		o.tag = a.env.Config().Service
 	}
 
+	// a memory broker gets a memory consumer: the service's own wiring —
+	// OnQueue, Start, Stop — then runs against it unchanged, which is what
+	// makes a test of the consuming side possible without RabbitMQ
+	if mem, ok := a.mq.(*MemoryMQ); ok {
+		mc := mem.newConsumer(a, o)
+		a.trackSubscriber(mc)
+		return mc
+	}
+
 	c := &mqConsumer{
 		app:      a,
 		opts:     o,
@@ -502,11 +511,21 @@ func (c *mqConsumer) isStopping() bool {
 // ends the message rather than the process — then acknowledges accordingly.
 func (c *mqConsumer) dispatch(queue string, h MQHandler, msg amqp.Delivery) {
 	d := toDelivery(queue, msg)
+	started := time.Now()
+	ctx, err := runMQHandler(c.app, c.opts.timeout, queue, h, d)
+	c.acknowledge(ctx, queue, d, msg, err, started)
+}
 
-	base, cancel := context.WithTimeout(context.Background(), c.opts.timeout)
+// runMQHandler runs one handler the way every delivery is run — its own
+// context, its own Sentry scope and transaction, a timeout, and a panic that
+// ends the message rather than the process — and returns what the handler
+// returned. Acknowledging is the caller's, because that is the one step that
+// differs between a broker and the memory queue.
+func runMQHandler(app *App, timeout time.Duration, queue string, h MQHandler, d *Delivery) (IContext, error) {
+	base, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	tracker := c.app.Sentry()
+	tracker := app.Sentry()
 	if hubCtx, hub := withHub(base, tracker); hub != nil {
 		hub.Scope().SetTags(map[string]string{
 			"mode":        ModeMQ.String(),
@@ -516,19 +535,36 @@ func (c *mqConsumer) dispatch(queue string, h MQHandler, msg amqp.Delivery) {
 		base = hubCtx
 	}
 
-	ctx := c.app.NewContext(base, ModeMQ)
+	ctx := app.NewContext(base, ModeMQ)
 	span := ctx.Sentry().StartTransaction("mq "+queue, "queue.process")
 	ctx = ctx.WithContext(span.Context())
 
-	started := time.Now()
 	var err error
 	func() {
 		defer Recover(&err)
 		err = h(&mqContext{IContext: ctx, delivery: d}, d)
 	}()
 	span.Finish(err)
+	return ctx, err
+}
 
-	c.acknowledge(ctx, queue, d, msg, err, started)
+// logMQOutcome writes the one line a handled message gets: a debug line when it
+// went well, an error line — which the logger's Sentry bridge turns into the
+// event, so this is one issue, not two — when it did not.
+func logMQOutcome(ctx IContext, queue string, d *Delivery, err error, took time.Duration) {
+	if err == nil {
+		ctx.Log().Debug("mq message handled",
+			"queue", queue, "routing_key", d.RoutingKey, "took", took.String())
+		return
+	}
+	ctx.Log().Error("mq handler failed",
+		"queue", queue,
+		"routing_key", d.RoutingKey,
+		"message_id", d.MessageID,
+		"redelivered", d.Redelivered,
+		"requeued", shouldRequeue(err),
+		"took", took.String(),
+		"err", err)
 }
 
 // acknowledge turns the handler's outcome into an AMQP acknowledgement.
@@ -547,26 +583,10 @@ func (c *mqConsumer) acknowledge(ctx IContext, queue string, d *Delivery, msg am
 		if ackErr := msg.Ack(false); ackErr != nil {
 			ctx.Log().Error("mq: ack failed", "queue", queue, "err", ackErr)
 		}
-		ctx.Log().Debug("mq message handled",
-			"queue", queue, "routing_key", d.RoutingKey, "took", took.String())
-		return
-	}
-
-	requeue := shouldRequeue(err)
-	if nackErr := msg.Nack(false, requeue); nackErr != nil {
+	} else if nackErr := msg.Nack(false, shouldRequeue(err)); nackErr != nil {
 		ctx.Log().Error("mq: nack failed", "queue", queue, "err", nackErr)
 	}
-
-	// logging it is what reports it: the logger's Sentry bridge turns a line
-	// carrying a 5xx error into an event, so this is one issue, not two
-	ctx.Log().Error("mq handler failed",
-		"queue", queue,
-		"routing_key", d.RoutingKey,
-		"message_id", d.MessageID,
-		"redelivered", d.Redelivered,
-		"requeued", requeue,
-		"took", took.String(),
-		"err", err)
+	logMQOutcome(ctx, queue, d, err, took)
 }
 
 // toDelivery converts the driver's delivery into ours, so a handler never has to

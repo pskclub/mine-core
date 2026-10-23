@@ -1,0 +1,5 @@
+# golang.org/x/crypto/openpgp is deprecated with no fixed version. Trivy matches
+# the whole x/crypto module, but no v2 package imports openpgp (check with
+# `go list -deps -test ./... | grep openpgp`), so the vulnerable code is never
+# linked. Remove this entry if that command ever prints anything.
+GO-2026-5932

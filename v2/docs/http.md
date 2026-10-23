@@ -77,6 +77,7 @@ struct tags:
 |---|---|---|
 | Path params | `param:"id"` | `/users/:id` |
 | Query params | `query:"q"` | `?q=foo` (all methods, incl. GET) |
+| Headers | `header:"X-Tenant"` | `X-Tenant: acme` |
 | JSON body | `json:"name"` | `Content-Type: application/json` |
 | Form / multipart | `form:"name"` | `application/x-www-form-urlencoded`, `multipart/form-data` |
 | XML body | `xml:"name"` | `application/xml` |

@@ -34,19 +34,21 @@ ctx := coretest.NewContext(t,
 capability ที่สลับได้: `WithCache`, `WithMQ`, `WithRequester`, `WithMongo`,
 `WithLogger`, `WithSentry`
 
-**capability ที่ไม่ได้ตั้ง จะคืน `nil` ไม่ panic** โค้ดที่เขียนแบบนี้จึงเทสได้ทั้ง
-สองทางโดยไม่ต้องปลอมอะไรเลย:
+**capability ที่ไม่ได้ตั้ง ไม่เคยคืน `nil`** — ได้ handle ที่ปิดอยู่แทน: `ctx.MQ()`, `ctx.Storage()`,
+`ctx.DBMongo()` คืนตัวที่ทุก call fail ด้วย `*_DISABLED` บอกว่าขาด config อะไร (fail loudly)
+ส่วน `ctx.Cache()` คืน handle ที่อ่าน miss และเขียนทิ้ง (degrade เงียบ) โค้ดจึงไม่ต้องเช็ค `nil`
+และเทสได้ทั้งสองทางโดยไม่ต้องปลอมอะไรเลย — ถ้าอยากรู้ว่าตั้งไว้หรือไม่ใช้ `Enabled()`:
 
 ```go
-if mq := ctx.MQ(); mq != nil {
+if ctx.MQ().Enabled() {
     ...
 }
 ```
 
-ยกเว้น cache: `ctx.Cache()` ไม่เคยเป็น `nil` — ถ้าไม่ได้ตั้งจะได้ handle ที่อ่าน miss
-และเขียนทิ้ง ทำให้ `core.Remember` ทำงานได้ทั้งสองทางโดยไม่ต้องเช็ค ถ้าอยากได้ cache
+cache ที่ปิดอยู่ทำให้ `core.Remember` ทำงานได้ทั้งสองทางโดยไม่ต้องเช็ค ถ้าอยากได้ cache
 จริงในเทสให้ใส่ `core.NewMemoryCache()` ซึ่งเป็นของจริงทั้ง TTL, counter, lock และ
-pub/sub แต่อยู่ในโปรเซสเดียว:
+pub/sub แต่อยู่ในโปรเซสเดียว (MQ ก็มีคู่กัน: `core.NewMemoryMQ()` — ดู
+[MQ patterns → Testing](./mq-patterns.md#testing)):
 
 ```go
 ctx := coretest.NewContext(t,

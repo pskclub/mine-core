@@ -505,6 +505,126 @@
           ]
         },
         {
+          "name": "POST /notes/drafts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"string\",\n  \"title\": \"Sample title\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notes/drafts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notes",
+                "drafts"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"body\": \"string\",\n  \"title\": \"Sample title\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/notes/drafts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notes",
+                    "drafts"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"body\": \"string\",\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"pinned\": true,\n  \"title\": \"Sample title\",\n  \"user_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"body\": \"string\",\n  \"title\": \"Sample title\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/notes/drafts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notes",
+                    "drafts"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"unauthorized\"\n}"
+            }
+          ]
+        },
+        {
           "name": "GET /notes/search",
           "request": {
             "method": "GET",

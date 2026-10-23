@@ -11,12 +11,14 @@ package jobstore
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	core "github.com/pskclub/mine-core/v2"
 	"github.com/pskclub/mine-core/v2/errmsgs"
 	"github.com/pskclub/mine-core/v2/repository"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Option configures a repository-backed backend.
@@ -108,7 +110,11 @@ func (s *repoStore) Create(ctx context.Context, run *core.JobRun) core.IError {
 // erase who stopped the run and why, exactly when that matters most.
 func (s *repoStore) Update(ctx context.Context, run *core.JobRun) core.IError {
 	run.UpdatedAt = time.Now()
+	// Select("*") makes this a plain UPDATE. Without it GORM's Save treats
+	// "no row matched" as "not there yet" and inserts — which would bring back
+	// a run that Purge removed the moment its worker wrote a final status.
 	return s.runs(ctx).
+		Select("*").
 		Omit("cancel_requested_at", "canceled_by", "cancel_reason").
 		Where("id = ?", run.ID).
 		Save(run)
@@ -134,7 +140,9 @@ func (s *repoStore) List(ctx context.Context, f core.JobRunFilter) (*core.Page[c
 		q = q.Where("queue = ?", f.Queue)
 	}
 	if f.Trigger != "" {
-		q = q.Where("trigger = ?", f.Trigger)
+		// quoted: TRIGGER is a reserved word in MySQL, and the sqlite the tests
+		// run on accepts it bare
+		q = q.Where(clause.Eq{Column: clause.Column{Name: "trigger"}, Value: f.Trigger})
 	}
 	if len(f.Statuses) > 0 {
 		q = q.Where("status IN ?", f.Statuses)
@@ -145,14 +153,26 @@ func (s *repoStore) List(ctx context.Context, f core.JobRunFilter) (*core.Page[c
 	if f.To != nil {
 		q = q.Where("created_at <= ?", *f.To)
 	}
-	opts := f.Page
-	if opts == nil {
-		opts = &core.PageOptions{}
+	// a copy, so the caller's filter is not rewritten underneath them
+	opts := core.PageOptions{}
+	if f.Page != nil {
+		opts = *f.Page
 	}
+	// the filter comes off an HTTP query in devtools and the admin API, so the
+	// order is re-read through the column check rather than trusted: anything
+	// that is not a run column is dropped, and nothing reaches SQL verbatim
+	opts.OrderBy = core.ParseOrderBy(strings.Join(opts.OrderBy, ","), runOrderColumns)
 	if len(opts.OrderBy) == 0 {
 		opts.OrderBy = []string{"created_at desc"}
 	}
-	return q.Pagination(opts)
+	return q.Pagination(&opts)
+}
+
+// runOrderColumns are the columns a run listing may be ordered by.
+var runOrderColumns = []string{
+	"id", "job_name", "queue", "status", "trigger", "triggered_by", "attempt",
+	"scheduled_at", "started_at", "finished_at", "duration_ms", "progress",
+	"worker_id", "created_at", "updated_at",
 }
 
 func (s *repoStore) FindActive(ctx context.Context, jobName, idemKey string) (*core.JobRun, core.IError) {

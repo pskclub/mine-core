@@ -50,13 +50,15 @@ func (d *devtools) tailRun(c core.IHTTPContext) error {
 	// browser sees nothing until it ends — the exact failure this endpoint is
 	// meant to avoid.
 	header.Set("X-Accel-Buffering", "no")
-	res.WriteHeader(http.StatusOK)
 
+	// before the status is written: once a 200 has gone out the error below
+	// could not be reported as anything but a truncated stream
 	flusher, ok := res.(http.Flusher)
 	if !ok {
 		return core.New(http.StatusInternalServerError, "STREAM_UNSUPPORTED",
 			"devtools: this server cannot stream")
 	}
+	res.WriteHeader(http.StatusOK)
 
 	lines, unsubscribe := d.opts.Runner.TailLogs(id)
 	defer unsubscribe()

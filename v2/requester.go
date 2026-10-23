@@ -3,7 +3,10 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -91,7 +94,83 @@ var (
 // accepted for symmetry with the other constructors and may be nil.
 func NewRequester(env IENV, log ILogger) IRequester {
 	rc := resty.New().SetTimeout(30 * time.Second)
+	if env != nil {
+		configureRequesterRetry(rc, env.Config())
+	}
 	return &requester{ctx: context.Background(), rc: rc, log: log}
+}
+
+// configureRequesterRetry applies HTTP_RETRY_* to the client. The retry is
+// conservative on purpose: a repeated POST can create a second order, so only a
+// request that is safe to repeat — an idempotent method, or one that carries an
+// Idempotency-Key — is retried, and only for the failures a second attempt can
+// change (the connection, 429, 5xx). Retry-After is honoured when present.
+func configureRequesterRetry(rc *resty.Client, cfg *ENVConfig) {
+	if cfg == nil || cfg.HTTPRetryCount <= 0 {
+		return
+	}
+	wait, maxWait := 200*time.Millisecond, 2*time.Second
+	if cfg.HTTPRetryWaitMS > 0 {
+		wait = time.Duration(cfg.HTTPRetryWaitMS) * time.Millisecond
+	}
+	if cfg.HTTPRetryMaxWaitMS > 0 {
+		maxWait = time.Duration(cfg.HTTPRetryMaxWaitMS) * time.Millisecond
+	}
+	rc.SetRetryCount(cfg.HTTPRetryCount).
+		SetRetryWaitTime(wait).
+		SetRetryMaxWaitTime(maxWait).
+		AddRetryCondition(func(resp *resty.Response, err error) bool {
+			if resp == nil || resp.Request == nil {
+				return false
+			}
+			if !requestIsRepeatable(resp.Request) {
+				return false
+			}
+			if err != nil {
+				// a caller that went away is not a failure to retry through
+				return !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded)
+			}
+			code := resp.StatusCode()
+			return code == http.StatusTooManyRequests || code >= 500
+		}).
+		SetRetryAfter(func(_ *resty.Client, resp *resty.Response) (time.Duration, error) {
+			if resp == nil {
+				return 0, nil
+			}
+			if d, ok := parseRetryAfter(resp.Header().Get("Retry-After")); ok {
+				return d, nil
+			}
+			return 0, nil // 0 = resty's own backoff
+		})
+}
+
+// requestIsRepeatable reports whether a retry could not do harm: an idempotent
+// method, or a request the caller marked with an Idempotency-Key, which is the
+// contract that makes repeating a POST safe.
+func requestIsRepeatable(req *resty.Request) bool {
+	switch req.Method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPut, http.MethodDelete:
+		return true
+	}
+	return req.Header.Get("Idempotency-Key") != ""
+}
+
+// parseRetryAfter reads a Retry-After header, in seconds or as an HTTP date.
+func parseRetryAfter(v string) (time.Duration, bool) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return 0, false
+	}
+	if secs, err := strconv.Atoi(v); err == nil && secs >= 0 {
+		return time.Duration(secs) * time.Second, true
+	}
+	if at, err := http.ParseTime(v); err == nil {
+		if d := time.Until(at); d > 0 {
+			return d, true
+		}
+		return 0, true
+	}
+	return 0, false
 }
 
 // NewRequesterWithClient wraps a fully-configured *resty.Client — use this to
@@ -114,6 +193,18 @@ func (r *requester) Resty() *resty.Client { return r.rc }
 func (r *requester) Send(req *resty.Request, method, url string) (*resty.Response, IError) {
 	resp, err := req.Execute(method, url)
 	if err != nil {
+		// the caller going away is not a failure of the dependency: reporting it
+		// as a 500 would make every client that closed its tab a Sentry incident
+		if errors.Is(err, context.Canceled) {
+			return resp, Wrap(err, "requester: request canceled").
+				WithCode("REQUEST_CANCELED").
+				WithStatus(499) // nginx's "client closed request"; no net/http constant
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			return resp, Wrap(err, "requester: upstream timed out").
+				WithCode("UPSTREAM_TIMEOUT").
+				WithStatus(http.StatusGatewayTimeout)
+		}
 		return resp, Wrap(err, "requester").
 			WithCode("NETWORK_ERROR").
 			WithStatus(http.StatusInternalServerError)

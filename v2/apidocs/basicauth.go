@@ -67,7 +67,16 @@ func resolveBasicAuth(opts Options, env core.IENV) *BasicAuth {
 	if password == "" {
 		return nil
 	}
-	return &BasicAuth{User: env.String(EnvBasicAuthUser), Password: password}
+	// the password came from the deployment, but a user or realm written in
+	// code is still what the caller asked for
+	out := &BasicAuth{Password: password}
+	if opts.BasicAuth != nil {
+		out.User, out.Realm = opts.BasicAuth.User, opts.BasicAuth.Realm
+	}
+	if out.User == "" {
+		out.User = env.String(EnvBasicAuthUser)
+	}
+	return out
 }
 
 // middleware refuses every request that does not carry the right credentials.
