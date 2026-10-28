@@ -25,7 +25,7 @@ require (
 	github.com/knadh/koanf/providers/env/v2 v2.0.2
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.4.1
-	github.com/labstack/echo/v5 v5.4.0
+	github.com/labstack/echo/v5 v5.4.1
 	github.com/mattn/go-colorable v0.1.16
 	github.com/mattn/go-isatty v0.0.24
 	github.com/rabbitmq/amqp091-go v1.15.0
